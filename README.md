@@ -17,13 +17,7 @@ The release path is intentionally simple:
 2. Publish those files as GitHub release assets.
 3. Install with `curl -fsSL https://raw.githubusercontent.com/PerishCode/oh-my-oc/main/scripts/manage/install.sh | sh`, or pass `--version <tag>` / `OH_MY_OC_VERSION=<tag>` to pin a release.
 
-For a private repo, fetch the installer with GitHub auth and set `OH_MY_OC_GITHUB_TOKEN` so it can resolve and download private release assets:
-
-```sh
-OH_MY_OC_GITHUB_TOKEN=... curl -fsSL https://raw.githubusercontent.com/PerishCode/oh-my-oc/main/scripts/manage/install.sh | sh -s -- --version v0.2.1
-```
-
-The installer uses `OH_MY_OC_REPO`, `OH_MY_OC_BASE_URL`, `OH_MY_OC_GITHUB_TOKEN`, `OH_MY_OC_INSTALL_ROOT`, and `OH_MY_OC_LOCAL_BIN_DIR` when you need to override defaults.
+The installer uses `OH_MY_OC_REPO`, `OH_MY_OC_BASE_URL`, `OH_MY_OC_INSTALL_ROOT`, and `OH_MY_OC_LOCAL_BIN_DIR` when you need to override defaults.
 
 Release assets are produced for Linux x86_64 and macOS x86_64/aarch64 only.
 

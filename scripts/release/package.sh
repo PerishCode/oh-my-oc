@@ -13,13 +13,17 @@ BIN="$APP_DIR/target/release/$NAME"
 
 mkdir -p "$ARTIFACT_DIR"
 cargo build --release --manifest-path "$APP_DIR/Cargo.toml"
-TARBALL="$NAME-$RELEASE_VERSION-$TARGET.tar.gz"
+TARBALL="$NAME-$TARGET.tar.gz"
 
 tmpdir=$(mktemp -d)
 trap 'rm -rf "$tmpdir"' EXIT INT TERM
 cp "$BIN" "$tmpdir/$NAME"
 tar -C "$tmpdir" -czf "$ARTIFACT_DIR/$TARBALL" "$NAME"
-(cd "$ARTIFACT_DIR" && shasum -a 256 "$TARBALL" > checksums.txt)
+(
+  cd "$ARTIFACT_DIR"
+  printf 'VERSION: %s\n' "$RELEASE_VERSION" > checksums.txt
+  shasum -a 256 "$TARBALL" >> checksums.txt
+)
 
 printf '%s\n' "$ARTIFACT_DIR/$TARBALL"
 printf '%s\n' "$ARTIFACT_DIR/checksums.txt"

@@ -36,14 +36,14 @@ jobs:
           dist="dist/${version}"
           mkdir -p "$dist"
           bin="oh-my-oc"
-          tarball="oh-my-oc-${version}-${{ matrix.target }}.tar.gz"
+          tarball="oh-my-oc-${{ matrix.target }}.tar.gz"
           cp "app/target/${{ matrix.target }}/release/oh-my-oc" "$dist/$bin"
           tar -czf "$dist/$tarball" -C "$dist" "$bin"
           rm -f "$dist/$bin"
       - uses: actions/upload-artifact@v7
         with:
           name: release-${{ matrix.target }}
-          path: dist/${{ github.ref_name }}/oh-my-oc-${{ github.ref_name }}-${{ matrix.target }}.tar.gz
+          path: dist/${{ github.ref_name }}/oh-my-oc-${{ matrix.target }}.tar.gz
 
   publish:
     needs: build
@@ -59,7 +59,8 @@ jobs:
         run: |
           set -eu
           cd "dist/${GITHUB_REF_NAME}"
-          sha256sum *.tar.gz > checksums.txt
+          printf 'VERSION: %s\n' "${GITHUB_REF_NAME}" > checksums.txt
+          sha256sum *.tar.gz >> checksums.txt
       - name: Publish release assets
         env:
           GH_TOKEN: ${{ github.token }}
