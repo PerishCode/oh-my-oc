@@ -1,5 +1,6 @@
 use std::fs;
 use std::path::PathBuf;
+use std::process::Command;
 
 const CURRENT_VERSION: &str = env!("CARGO_PKG_VERSION");
 const OPENCODE_JSON: &str = include_str!("../../resources/patch/opencode/opencode.json");
@@ -45,13 +46,9 @@ fn main() {
                 .or_else(|| std::env::var("OH_MY_OC_PATCH_VERSION").ok())
                 .unwrap_or_else(|| CURRENT_VERSION.to_string());
 
-            if version != CURRENT_VERSION {
-                fail(&format!(
-                    "error: patch version {version} is not available in this build"
-                ));
-            }
+            let resource_url_template = std::env::var("OH_MY_OC_PATCH_RESOURCE_URL_TEMPLATE").ok();
 
-            if let Err(error) = patch(&path, force) {
+            if let Err(error) = patch(&path, &version, resource_url_template.as_deref(), force) {
                 fail(&format!("error: {error}"));
             }
         }
@@ -84,19 +81,24 @@ fn default_patch_path() -> PathBuf {
     PathBuf::from(home).join(".config/opencode")
 }
 
-fn patch(target: &std::path::Path, force: bool) -> Result<(), String> {
+fn patch(
+    target: &std::path::Path,
+    version: &str,
+    resource_url_template: Option<&str>,
+    force: bool,
+) -> Result<(), String> {
     fs::create_dir_all(target)
         .map_err(|e| format!("failed to create {}: {}", target.display(), e))?;
 
     let files = [
-        ("opencode.json", OPENCODE_JSON),
-        ("agent/commander.md", COMMANDER_MD),
-        ("agent/explorer.md", EXPLORER_MD),
-        ("agent/coder.md", CODER_MD),
-        ("agent/advisor.md", ADVISOR_MD),
+        "opencode.json",
+        "agent/commander.md",
+        "agent/explorer.md",
+        "agent/coder.md",
+        "agent/advisor.md",
     ];
 
-    for (relative, contents) in files {
+    for relative in files {
         let path = target.join(relative);
         if path.exists() && !force {
             return Err(format!("{} already exists", path.display()));
@@ -105,9 +107,50 @@ fn patch(target: &std::path::Path, force: bool) -> Result<(), String> {
             fs::create_dir_all(parent)
                 .map_err(|e| format!("failed to create {}: {}", parent.display(), e))?;
         }
+        let contents = patch_resource(relative, version, resource_url_template)?;
         fs::write(&path, contents)
             .map_err(|e| format!("failed to write {}: {}", path.display(), e))?;
     }
 
     Ok(())
+}
+
+fn patch_resource(
+    path: &str,
+    version: &str,
+    resource_url_template: Option<&str>,
+) -> Result<String, String> {
+    if let Some(template) = resource_url_template {
+        if !template.contains("{path}") {
+            return Err("OH_MY_OC_PATCH_RESOURCE_URL_TEMPLATE must include {path}".to_string());
+        }
+        let url = template
+            .replace("{version}", version)
+            .replace("{path}", path);
+        let output = Command::new("curl")
+            .args(["-fsSL", &url])
+            .output()
+            .map_err(|e| format!("failed to run curl for {url}: {e}"))?;
+        if !output.status.success() {
+            return Err(format!("failed to fetch {url}"));
+        }
+        return String::from_utf8(output.stdout)
+            .map_err(|e| format!("fetched {url} was not valid utf-8: {e}"));
+    }
+
+    if version != CURRENT_VERSION {
+        return Err(format!(
+            "patch version {version} is not available without OH_MY_OC_PATCH_RESOURCE_URL_TEMPLATE"
+        ));
+    }
+
+    Ok(match path {
+        "opencode.json" => OPENCODE_JSON,
+        "agent/commander.md" => COMMANDER_MD,
+        "agent/explorer.md" => EXPLORER_MD,
+        "agent/coder.md" => CODER_MD,
+        "agent/advisor.md" => ADVISOR_MD,
+        _ => unreachable!(),
+    }
+    .to_string())
 }
