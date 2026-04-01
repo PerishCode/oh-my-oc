@@ -2,7 +2,7 @@
 
 This repository is for personal use. Keep it simple and clean first; avoid over-designing for collaboration, process, resilience, or generality.
 
-This repository is currently an Opencode patch bundle that is splitting into `resources/` and `app/`. Keep the root lightweight while that direction stays documented.
+`oh-my-oc` is a patch-first tool for the Opencode config directory, not a broader helper/runtime manager. Keep the root lightweight while that boundary stays documented.
 
 ## Active agent layout
 
@@ -21,12 +21,21 @@ This repository is currently an Opencode patch bundle that is splitting into `re
 - `.gitignore`: ignores `.tmp/`.
 - `.opencode/.gitignore`: ignores local dependency files in `.opencode/`.
 
+## Managed files policy
+
+- Default patch target is `~/.config/opencode`; CLI args control path/version first, then env vars, then defaults.
+- The managed file boundary is intentionally narrow: `opencode.json` and `agent/*.md`.
+- Only those managed files should be written or overwritten by the patch flow.
+- Quick-fail behavior is intentional when the target or files do not match the managed boundary.
+- Version overrides are allowed, but only the bundled/current build resources are guaranteed.
+
 ## Maintenance guidance
 
 - Keep changes minimal, simple, and clean.
 - Prefer the smallest working config over broader patterns or future-proofing.
 - Treat `resources/` as supporting material, not an execution layer.
 - Treat `app/` as a small distributable CLI surface, not a place for heavy architecture.
+- Keep patch behavior constrained to the managed files policy above.
 - The current install flow is a tiny `install.sh` that fetches GitHub release artifacts; keep it minimal and do not add CI or broader release automation.
 - Preserve role boundaries: commander orchestrates, explorer gathers facts, coder implements, advisor reviews.
 - Prefer updating the existing patch resources or agent file over adding parallel copies.
