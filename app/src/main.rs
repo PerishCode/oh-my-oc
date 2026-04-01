@@ -3,11 +3,8 @@ use std::path::PathBuf;
 use std::process::Command;
 
 const CURRENT_VERSION: &str = env!("CARGO_PKG_VERSION");
-const OPENCODE_JSON: &str = include_str!("../../resources/patch/opencode/opencode.json");
-const COMMANDER_MD: &str = include_str!("../../resources/patch/opencode/agent/commander.md");
-const EXPLORER_MD: &str = include_str!("../../resources/patch/opencode/agent/explorer.md");
-const CODER_MD: &str = include_str!("../../resources/patch/opencode/agent/coder.md");
-const ADVISOR_MD: &str = include_str!("../../resources/patch/opencode/agent/advisor.md");
+const DEFAULT_PATCH_RELEASE_BASE_URL: &str =
+    "https://github.com/PerishCode/resources/releases/download";
 
 fn main() {
     let mut args = std::env::args().skip(1);
@@ -46,9 +43,7 @@ fn main() {
                 .or_else(|| std::env::var("OH_MY_OC_PATCH_VERSION").ok())
                 .unwrap_or_else(|| CURRENT_VERSION.to_string());
 
-            let resource_url_template = std::env::var("OH_MY_OC_PATCH_RESOURCE_URL_TEMPLATE").ok();
-
-            if let Err(error) = patch(&path, &version, resource_url_template.as_deref(), force) {
+            if let Err(error) = patch(&path, &version, force) {
                 fail(&format!("error: {error}"));
             }
         }
@@ -81,14 +76,26 @@ fn default_patch_path() -> PathBuf {
     PathBuf::from(home).join(".config/opencode")
 }
 
-fn patch(
-    target: &std::path::Path,
-    version: &str,
-    resource_url_template: Option<&str>,
-    force: bool,
-) -> Result<(), String> {
+fn patch(target: &std::path::Path, version: &str, force: bool) -> Result<(), String> {
     fs::create_dir_all(target)
         .map_err(|e| format!("failed to create {}: {}", target.display(), e))?;
+
+    let tarball = format!("oh-my-oc-{version}.tar.gz");
+    let tarball_url =
+        format!("{DEFAULT_PATCH_RELEASE_BASE_URL}/{version}/oh-my-oc-{version}.tar.gz");
+    let tmpdir = temp_dir()?;
+    let archive = tmpdir.join(&tarball);
+
+    fetch_file(&tarball_url, &archive)?;
+    extract_tarball(&archive, &tmpdir)?;
+
+    let source_root = tmpdir.join("oh-my-oc").join("opencode");
+    if !source_root.is_dir() {
+        return Err(format!(
+            "missing oh-my-oc/opencode/ directory in {}",
+            tarball
+        ));
+    }
 
     let files = [
         "opencode.json",
@@ -98,59 +105,93 @@ fn patch(
         "agent/advisor.md",
     ];
 
+    let mut prepared = Vec::with_capacity(files.len());
+
     for relative in files {
         let path = target.join(relative);
         if path.exists() && !force {
             return Err(format!("{} already exists", path.display()));
         }
+        let source = source_root.join(relative);
+        let contents = fs::read_to_string(&source)
+            .map_err(|e| format!("failed to read {}: {}", source.display(), e))?;
+        prepared.push((path, contents));
+    }
+
+    let staging = tmpdir.join("staging");
+    fs::create_dir_all(&staging)
+        .map_err(|e| format!("failed to create {}: {}", staging.display(), e))?;
+
+    for (path, contents) in &prepared {
+        let staged_path = staging.join(path.strip_prefix(target).unwrap_or(path));
+        if let Some(parent) = staged_path.parent() {
+            fs::create_dir_all(parent)
+                .map_err(|e| format!("failed to create {}: {}", parent.display(), e))?;
+        }
+        fs::write(&staged_path, contents)
+            .map_err(|e| format!("failed to write {}: {}", staged_path.display(), e))?;
+    }
+
+    for (path, _) in prepared {
         if let Some(parent) = path.parent() {
             fs::create_dir_all(parent)
                 .map_err(|e| format!("failed to create {}: {}", parent.display(), e))?;
         }
-        let contents = patch_resource(relative, version, resource_url_template)?;
-        fs::write(&path, contents)
-            .map_err(|e| format!("failed to write {}: {}", path.display(), e))?;
+        let staged_path = staging.join(path.strip_prefix(target).unwrap_or(&path));
+        fs::rename(&staged_path, &path).map_err(|e| {
+            format!(
+                "failed to move {} to {}: {}",
+                staged_path.display(),
+                path.display(),
+                e
+            )
+        })?;
     }
 
     Ok(())
 }
 
-fn patch_resource(
-    path: &str,
-    version: &str,
-    resource_url_template: Option<&str>,
-) -> Result<String, String> {
-    if let Some(template) = resource_url_template {
-        if !template.contains("{path}") {
-            return Err("OH_MY_OC_PATCH_RESOURCE_URL_TEMPLATE must include {path}".to_string());
-        }
-        let url = template
-            .replace("{version}", version)
-            .replace("{path}", path);
-        let output = Command::new("curl")
-            .args(["-fsSL", &url])
-            .output()
-            .map_err(|e| format!("failed to run curl for {url}: {e}"))?;
-        if !output.status.success() {
-            return Err(format!("failed to fetch {url}"));
-        }
-        return String::from_utf8(output.stdout)
-            .map_err(|e| format!("fetched {url} was not valid utf-8: {e}"));
+fn fetch_file(url: &str, output: &std::path::Path) -> Result<(), String> {
+    let output = Command::new("curl")
+        .args(["-fsSL", url, "-o"])
+        .arg(output)
+        .output()
+        .map_err(|e| format!("failed to run curl for {url}: {e}"))?;
+    if !output.status.success() {
+        return Err(format!("failed to fetch {url}"));
     }
+    Ok(())
+}
 
-    if version != CURRENT_VERSION {
-        return Err(format!(
-            "patch version {version} is not available without OH_MY_OC_PATCH_RESOURCE_URL_TEMPLATE"
-        ));
+fn extract_tarball(tarball: &std::path::Path, dir: &std::path::Path) -> Result<(), String> {
+    let status = Command::new("tar")
+        .args(["-xzf"])
+        .arg(tarball)
+        .args(["-C"])
+        .arg(dir)
+        .status()
+        .map_err(|e| format!("failed to run tar for {}: {e}", tarball.display()))?;
+    if !status.success() {
+        return Err(format!("failed to extract {}", tarball.display()));
     }
+    Ok(())
+}
 
-    Ok(match path {
-        "opencode.json" => OPENCODE_JSON,
-        "agent/commander.md" => COMMANDER_MD,
-        "agent/explorer.md" => EXPLORER_MD,
-        "agent/coder.md" => CODER_MD,
-        "agent/advisor.md" => ADVISOR_MD,
-        _ => unreachable!(),
-    }
-    .to_string())
+fn temp_dir() -> Result<PathBuf, String> {
+    let mut base = std::env::temp_dir();
+    base.push(format!(
+        "oh-my-oc-{}-{}",
+        std::process::id(),
+        timestamp_nanos()
+    ));
+    fs::create_dir_all(&base).map_err(|e| format!("failed to create {}: {}", base.display(), e))?;
+    Ok(base)
+}
+
+fn timestamp_nanos() -> u128 {
+    use std::time::{SystemTime, UNIX_EPOCH};
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|d| d.as_nanos())
+        .unwrap_or(0)
 }
