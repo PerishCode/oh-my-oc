@@ -27,3 +27,21 @@ OH_MY_OC_GITHUB_TOKEN=... curl -fsSL https://raw.githubusercontent.com/PerishCod
 The installer uses `OH_MY_OC_REPO`, `OH_MY_OC_BASE_URL`, `OH_MY_OC_GITHUB_TOKEN`, `OH_MY_OC_INSTALL_ROOT`, and `OH_MY_OC_LOCAL_BIN_DIR` when you need to override defaults.
 
 Release assets are produced for Linux x86_64 and macOS x86_64/aarch64 only.
+
+## CLI
+
+Apply the bundled Opencode patch into the default config directory:
+
+```sh
+oh-my-oc patch
+```
+
+Patch behavior:
+
+- Default target: `~/.config/opencode`
+- Override target path with `--path <value>` or `OH_MY_OC_PATCH_PATH`
+- Override version selection with `--version <value>` or `OH_MY_OC_PATCH_VERSION`
+- CLI flags win over env vars, and env vars win over defaults
+- Use `--force` to overwrite managed files if they already exist
+
+Only the current binary-bound version is available in this build. If another version is requested, the CLI fails clearly instead of fetching anything.

@@ -21,7 +21,7 @@ jobs:
             target: x86_64-apple-darwin
     runs-on: ${{ matrix.runner }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: stable
@@ -40,7 +40,7 @@ jobs:
           cp "app/target/${{ matrix.target }}/release/oh-my-oc" "$dist/$bin"
           tar -czf "$dist/$tarball" -C "$dist" "$bin"
           rm -f "$dist/$bin"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         with:
           name: release-${{ matrix.target }}
           path: dist/${{ github.ref_name }}/oh-my-oc-${{ github.ref_name }}-${{ matrix.target }}.tar.gz
@@ -51,7 +51,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v5
         with:
           path: dist/${{ github.ref_name }}
           merge-multiple: true

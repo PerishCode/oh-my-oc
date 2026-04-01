@@ -2,7 +2,7 @@
 
 This repository is for personal use. Keep it simple and clean first; avoid over-designing for collaboration, process, resilience, or generality.
 
-This repository is currently an Opencode configuration template that is splitting into `resources/` and `app/`. Keep the root lightweight while that direction stays documented.
+This repository is currently an Opencode patch bundle that is splitting into `resources/` and `app/`. Keep the root lightweight while that direction stays documented.
 
 ## Active agent layout
 
@@ -13,7 +13,7 @@ This repository is currently an Opencode configuration template that is splittin
 
 ## Relevant files and directories
 
-- `resources/`: reference material and supporting content; keep it organized and low-maintenance.
+- `resources/`: reference material and patch resources; keep it organized and low-maintenance.
 - `app/`: minimal Rust CLI surface for `oh-my-oc`; keep it small and avoid overbuilding it.
 - `opencode.json`: root config; sets the schema, `openai/gpt-5.4`, full permission allow, and `default_agent: commander`.
 - `.opencode/package.json`: installs `@opencode-ai/plugin` for the local setup.
@@ -29,7 +29,7 @@ This repository is currently an Opencode configuration template that is splittin
 - Treat `app/` as a small distributable CLI surface, not a place for heavy architecture.
 - The current install flow is a tiny `install.sh` that fetches GitHub release artifacts; keep it minimal and do not add CI or broader release automation.
 - Preserve role boundaries: commander orchestrates, explorer gathers facts, coder implements, advisor reviews.
-- Prefer updating the existing config or agent file over adding parallel copies.
+- Prefer updating the existing patch resources or agent file over adding parallel copies.
 - Do not reintroduce deleted legacy files, extra layers, or unused clutter.
 - If agent behavior or repository layout changes, update this document at the same time so it stays accurate and compact.
 
