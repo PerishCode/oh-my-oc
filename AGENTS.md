@@ -26,6 +26,8 @@ This repository is for personal use. Keep it simple and clean first; avoid over-
 - Default patch target is `~/.config/opencode`; CLI args control path/version first, then env vars, then defaults.
 - The managed file boundary is intentionally narrow: `opencode.json` and `agent/*.md`.
 - Only those managed files should be written or overwritten by the patch flow.
+- Runtime agent visibility should be assumed only for content inside that managed boundary after patching.
+- Do not rely on external template paths, sidecar files, or soft references unless the patch/install chain gives them a stable runtime location and Opencode has a native way to load them.
 - Quick-fail behavior is intentional when the target or files do not match the managed boundary.
 - Version overrides are allowed; bundled/current build resources are guaranteed, and remote version overrides may use `OH_MY_OC_PATCH_RESOURCE_URL_TEMPLATE`.
 
@@ -36,6 +38,7 @@ This repository is for personal use. Keep it simple and clean first; avoid over-
 - Treat `resources/` as supporting material, not an execution layer.
 - Treat `app/` as a small distributable CLI surface, not a place for heavy architecture.
 - Keep patch behavior constrained to the managed files policy above.
+- If a behavior must be reliably present for commander at runtime, prefer encoding it directly in `agent/commander.md` or another managed file instead of introducing extra runtime dependencies.
 - The current install flow is a tiny `install.sh` that fetches GitHub release artifacts; keep it minimal and do not add CI or broader release automation.
 - Preserve role boundaries: commander orchestrates, explorer gathers facts, coder implements, advisor reviews.
 - Prefer updating the existing patch resources or agent file over adding parallel copies.
