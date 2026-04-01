@@ -66,6 +66,7 @@ jobs:
         run: |
           set -eu
           gh release create "${GITHUB_REF_NAME}" \
+            --repo "${GITHUB_REPOSITORY}" \
             dist/${GITHUB_REF_NAME}/*.tar.gz \
             dist/${GITHUB_REF_NAME}/checksums.txt \
             --title "${GITHUB_REF_NAME}" \
