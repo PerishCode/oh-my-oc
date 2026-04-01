@@ -3,7 +3,7 @@ set -eu
 
 NAME=${OH_MY_OC_NAME:-oh-my-oc}
 REPO=${OH_MY_OC_REPO:-PerishCode/oh-my-oc}
-BASE_URL=${OH_MY_OC_BASE_URL:-https://github.com/$REPO/releases/download}
+BASE_URL=${OH_MY_OC_BASE_URL:-https://github.com/$REPO/releases}
 INSTALL_ROOT=${OH_MY_OC_INSTALL_ROOT:-"$HOME/.local/share/$NAME"}
 LOCAL_BIN_DIR=${OH_MY_OC_LOCAL_BIN_DIR:-"$HOME/.local/bin"}
 VERSION=${OH_MY_OC_VERSION:-}
@@ -39,10 +39,16 @@ case "$(uname -s)-$(uname -m)" in
     ;;
 esac
 
-release_ref=${VERSION:-latest}
 tarball="$NAME-$TARGET.tar.gz"
-checksums_url="$BASE_URL/$release_ref/checksums.txt"
-tarball_url="$BASE_URL/$release_ref/$tarball"
+if [ -n "$VERSION" ]; then
+  release_path="$VERSION"
+  checksums_url="$BASE_URL/download/$release_path/checksums.txt"
+  tarball_url="$BASE_URL/download/$release_path/$tarball"
+else
+  release_path="latest"
+  checksums_url="$BASE_URL/$release_path/download/checksums.txt"
+  tarball_url="$BASE_URL/$release_path/download/$tarball"
+fi
 
 tmpdir=$(mktemp -d)
 trap 'rm -rf "$tmpdir"' EXIT INT TERM
