@@ -19,6 +19,8 @@ The release path is intentionally simple:
 
 The installer uses `OH_MY_OC_REPO`, `OH_MY_OC_BASE_URL`, `OH_MY_OC_INSTALL_ROOT`, and `OH_MY_OC_LOCAL_BIN_DIR` when you need to override defaults.
 
+Latest mode fetches release assets from the GitHub Releases `latest/download/` path.
+
 Release assets are produced for Linux x86_64 and macOS x86_64/aarch64 only.
 
 ## `oh-my-oc patch`
