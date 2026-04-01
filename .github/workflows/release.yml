@@ -1,0 +1,67 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - runner: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+          - runner: macos-latest
+            target: aarch64-apple-darwin
+          - runner: macos-latest
+            target: x86_64-apple-darwin
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+          targets: ${{ matrix.target }}
+      - name: Build release binary
+        working-directory: app
+        run: cargo build --locked --release --target ${{ matrix.target }}
+      - name: Package artifact
+        run: |
+          set -eu
+          version="${GITHUB_REF_NAME}"
+          dist="dist/${version}"
+          mkdir -p "$dist"
+          bin="oh-my-oc"
+          tarball="oh-my-oc-${version}-${{ matrix.target }}.tar.gz"
+          cp "app/target/${{ matrix.target }}/release/oh-my-oc" "$dist/$bin"
+          tar -czf "$dist/$tarball" -C "$dist" "$bin"
+          rm -f "$dist/$bin"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-${{ matrix.target }}
+          path: dist/${{ github.ref_name }}/oh-my-oc-${{ github.ref_name }}-${{ matrix.target }}.tar.gz
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist/${{ github.ref_name }}
+          merge-multiple: true
+      - name: Create checksums
+        run: |
+          set -eu
+          cd "dist/${GITHUB_REF_NAME}"
+          sha256sum *.tar.gz > checksums.txt
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/${{ github.ref_name }}/*.tar.gz
+            dist/${{ github.ref_name }}/checksums.txt

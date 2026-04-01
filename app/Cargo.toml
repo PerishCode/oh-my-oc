@@ -1,0 +1,8 @@
+[package]
+name = "oh-my-oc"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "oh-my-oc"
+path = "src/main.rs"
