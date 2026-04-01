@@ -21,27 +21,36 @@ The release path is intentionally simple:
 For a private repo, fetch the installer with GitHub auth and set `OH_MY_OC_GITHUB_TOKEN` so it can resolve and download private release assets:
 
 ```sh
-OH_MY_OC_GITHUB_TOKEN=... curl -fsSL https://raw.githubusercontent.com/PerishCode/oh-my-oc/main/scripts/manage/install.sh | sh -s -- --version v0.1.0
+OH_MY_OC_GITHUB_TOKEN=... curl -fsSL https://raw.githubusercontent.com/PerishCode/oh-my-oc/main/scripts/manage/install.sh | sh -s -- --version v0.2.1
 ```
 
 The installer uses `OH_MY_OC_REPO`, `OH_MY_OC_BASE_URL`, `OH_MY_OC_GITHUB_TOKEN`, `OH_MY_OC_INSTALL_ROOT`, and `OH_MY_OC_LOCAL_BIN_DIR` when you need to override defaults.
 
 Release assets are produced for Linux x86_64 and macOS x86_64/aarch64 only.
 
-## CLI
+## `oh-my-oc patch`
 
-Apply the bundled Opencode patch into the default config directory:
+Install the current release, then apply the bundled patch into your Opencode config:
 
 ```sh
+curl -fsSL https://raw.githubusercontent.com/PerishCode/oh-my-oc/main/scripts/manage/install.sh | sh
 oh-my-oc patch
 ```
 
-Patch behavior:
+Examples:
+
+```sh
+oh-my-oc patch --path ~/.config/opencode
+oh-my-oc patch --force
+```
+
+Notes:
 
 - Default target: `~/.config/opencode`
-- Override target path with `--path <value>` or `OH_MY_OC_PATCH_PATH`
-- Override version selection with `--version <value>` or `OH_MY_OC_PATCH_VERSION`
-- CLI flags win over env vars, and env vars win over defaults
-- Use `--force` to overwrite managed files if they already exist
+- Override target path with `--path` or `OH_MY_OC_PATCH_PATH`
+- `--version` selects a bundled patch resource when available in this build
+- Override version with `--version` or `OH_MY_OC_PATCH_VERSION`
+- This build only guarantees the patch resources shipped with the binary; version overrides may fail if that version is not included
+- `patch` only writes or overwrites managed files in `opencode.json` and `agent/*.md`
 
-Only the current binary-bound version is available in this build. If another version is requested, the CLI fails clearly instead of fetching anything.
+Flags win over env vars, and env vars win over defaults.
