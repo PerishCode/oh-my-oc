@@ -51,6 +51,13 @@ Notes:
 - `--version` selects a bundled patch resource when available in this build
 - Override version with `--version` or `OH_MY_OC_PATCH_VERSION`
 - Set `OH_MY_OC_PATCH_RESOURCE_URL_TEMPLATE` to fetch managed files from a URL template using `{version}` and `{path}` placeholders
+- Public resources can be sourced from `PerishCode/resources`, for example:
+
+```sh
+OH_MY_OC_PATCH_RESOURCE_URL_TEMPLATE='https://raw.githubusercontent.com/PerishCode/resources/{version}/sources/oh-my-oc/opencode/{path}' \
+oh-my-oc patch --version v0.1.0 --force
+```
+
 - This build only guarantees the patch resources shipped with the binary; version overrides need the URL template or may fail if that version is not included
 - `patch` only writes or overwrites managed files in `opencode.json` and `agent/*.md`
 
