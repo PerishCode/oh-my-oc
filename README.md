@@ -50,7 +50,8 @@ Notes:
 - Override target path with `--path` or `OH_MY_OC_PATCH_PATH`
 - `--version` selects a bundled patch resource when available in this build
 - Override version with `--version` or `OH_MY_OC_PATCH_VERSION`
-- This build only guarantees the patch resources shipped with the binary; version overrides may fail if that version is not included
+- Set `OH_MY_OC_PATCH_RESOURCE_URL_TEMPLATE` to fetch managed files from a URL template using `{version}` and `{path}` placeholders
+- This build only guarantees the patch resources shipped with the binary; version overrides need the URL template or may fail if that version is not included
 - `patch` only writes or overwrites managed files in `opencode.json` and `agent/*.md`
 
 Flags win over env vars, and env vars win over defaults.

@@ -27,7 +27,7 @@ This repository is for personal use. Keep it simple and clean first; avoid over-
 - The managed file boundary is intentionally narrow: `opencode.json` and `agent/*.md`.
 - Only those managed files should be written or overwritten by the patch flow.
 - Quick-fail behavior is intentional when the target or files do not match the managed boundary.
-- Version overrides are allowed, but only the bundled/current build resources are guaranteed.
+- Version overrides are allowed; bundled/current build resources are guaranteed, and remote version overrides may use `OH_MY_OC_PATCH_RESOURCE_URL_TEMPLATE`.
 
 ## Maintenance guidance
 
