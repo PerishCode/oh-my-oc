@@ -6,8 +6,8 @@ use std::process::Command;
 const CURRENT_VERSION: &str = env!("CARGO_PKG_VERSION");
 const DEFAULT_PATCH_RELEASE_BASE_URL: &str =
     "https://github.com/PerishCode/resources/releases/download";
-const DEFAULT_PATCH_LATEST_BASE_URL: &str =
-    "https://github.com/PerishCode/resources/releases/latest/download";
+const DEFAULT_PATCH_LATEST_API_URL: &str =
+    "https://api.github.com/repos/PerishCode/resources/releases/latest";
 
 #[cfg(windows)]
 const PATCH_ARCHIVE_EXTENSION: &str = "zip";
@@ -97,18 +97,12 @@ fn patch(target: &std::path::Path, version: Option<&str>, force: bool) -> Result
     fs::create_dir_all(target)
         .map_err(|e| format!("failed to create {}: {}", target.display(), e))?;
 
-    let version = version.filter(|value| !value.is_empty());
-    let archive_name = match version {
-        Some(version) => format!("oh-my-oc-{version}.{PATCH_ARCHIVE_EXTENSION}"),
-        None => format!("oh-my-oc-latest.{PATCH_ARCHIVE_EXTENSION}"),
+    let resolved_version = match version.filter(|value| !value.is_empty()) {
+        Some(version) => version.to_string(),
+        None => latest_patch_version()?,
     };
-    let archive_url = match version {
-        Some(version) => {
-            let release_archive = format!("oh-my-oc-{version}.{PATCH_ARCHIVE_EXTENSION}");
-            format!("{DEFAULT_PATCH_RELEASE_BASE_URL}/{version}/{release_archive}")
-        }
-        None => format!("{DEFAULT_PATCH_LATEST_BASE_URL}/oh-my-oc.{PATCH_ARCHIVE_EXTENSION}"),
-    };
+    let archive_name = format!("oh-my-oc-{resolved_version}.{PATCH_ARCHIVE_EXTENSION}");
+    let archive_url = format!("{DEFAULT_PATCH_RELEASE_BASE_URL}/{resolved_version}/{archive_name}");
     let tmpdir = temp_dir()?;
     let archive = tmpdir.join(&archive_name);
 
@@ -251,6 +245,41 @@ fn fetch_file(url: &str, output: &std::path::Path) -> Result<(), String> {
     }
 }
 
+fn latest_patch_version() -> Result<String, String> {
+    #[cfg(windows)]
+    {
+        return powershell_output(&[
+            "-NoProfile",
+            "-Command",
+            "(Invoke-RestMethod -UseBasicParsing -Uri $args[0]).tag_name",
+            DEFAULT_PATCH_LATEST_API_URL,
+        ])
+        .map_err(|e| format!("failed to resolve latest patch release: {e}"));
+    }
+
+    #[cfg(not(windows))]
+    {
+        let output = Command::new("curl")
+            .args(["-fsSL", DEFAULT_PATCH_LATEST_API_URL])
+            .output()
+            .map_err(|e| format!("failed to query latest patch release: {e}"))?;
+        if !output.status.success() {
+            return Err("failed to resolve latest patch release".to_string());
+        }
+
+        extract_tag_name(&String::from_utf8_lossy(&output.stdout))
+            .ok_or_else(|| "failed to parse latest patch release tag".to_string())
+    }
+}
+
+#[cfg(not(windows))]
+fn extract_tag_name(body: &str) -> Option<String> {
+    let marker = "\"tag_name\":\"";
+    let start = body.find(marker)? + marker.len();
+    let end = body[start..].find('"')?;
+    Some(body[start..start + end].to_string())
+}
+
 fn extract_archive(tarball: &std::path::Path, dir: &std::path::Path) -> Result<(), String> {
     #[cfg(windows)]
     {
@@ -314,5 +343,28 @@ fn run_powershell(args: &[&str]) -> Result<(), String> {
         Err("powershell command failed".to_string())
     } else {
         Err(stderr)
+    }
+}
+
+#[cfg(windows)]
+fn powershell_output(args: &[&str]) -> Result<String, String> {
+    let output = Command::new("powershell")
+        .args(args)
+        .output()
+        .map_err(|e| format!("failed to run powershell: {e}"))?;
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
+        return if stderr.is_empty() {
+            Err("powershell command failed".to_string())
+        } else {
+            Err(stderr)
+        };
+    }
+
+    let stdout = String::from_utf8_lossy(&output.stdout).trim().to_string();
+    if stdout.is_empty() {
+        Err("powershell command returned no output".to_string())
+    } else {
+        Ok(stdout)
     }
 }
