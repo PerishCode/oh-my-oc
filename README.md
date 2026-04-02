@@ -34,7 +34,7 @@ irm https://raw.githubusercontent.com/PerishCode/oh-my-oc/main/scripts/manage/in
 Pin a release:
 
 ```powershell
-& ([scriptblock]::Create((irm https://raw.githubusercontent.com/PerishCode/oh-my-oc/main/scripts/manage/install.ps1))) --version v0.2.8
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/PerishCode/oh-my-oc/main/scripts/manage/install.ps1))) --version v0.2.9
 ```
 
 The PowerShell installer uses `OH_MY_OC_REPO`, `OH_MY_OC_BASE_URL`, `OH_MY_OC_INSTALL_ROOT`, and `OH_MY_OC_LOCAL_BIN_DIR` when you need to override defaults.
