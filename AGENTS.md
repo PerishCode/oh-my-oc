@@ -25,7 +25,7 @@ This repository is for personal use. Keep it simple and clean first; avoid over-
 - Runtime agent visibility should be assumed only for content inside that managed boundary after patching.
 - Do not rely on external template paths, sidecar files, or soft references unless the patch/install chain gives them a stable runtime location and Opencode has a native way to load them.
 - Quick-fail behavior is intentional when the target or files do not match the managed boundary.
-- Version overrides are allowed; patch content is fetched only from the official `PerishCode/resources` release tarball `oh-my-oc-<version>.tar.gz`.
+- Version overrides are allowed; patch content is fetched only from the official `PerishCode/resources` release archive: `.tar.gz` on Unix and `.zip` on Windows.
 
 ## Maintenance guidance
 
@@ -34,7 +34,7 @@ This repository is for personal use. Keep it simple and clean first; avoid over-
 - Treat `app/` as a small distributable CLI surface, not a place for heavy architecture.
 - Keep patch behavior constrained to the managed files policy above.
 - If a behavior must be reliably present for commander at runtime, prefer encoding it directly in `agent/commander.md` or another managed file instead of introducing extra runtime dependencies.
-- The current install flow is a tiny `install.sh` that fetches GitHub release artifacts; keep it minimal and do not add CI or broader release automation.
+- The current install flow is intentionally tiny: `install.sh` for Unix and `install.ps1` for Windows fetch GitHub release artifacts; local packaging helpers should stay equally minimal.
 - Preserve role boundaries: commander orchestrates, explorer gathers facts, coder implements, advisor reviews.
 - Do not reintroduce deleted legacy files, extra layers, or unused clutter.
 - If agent behavior or repository layout changes, update this document at the same time so it stays accurate and compact.

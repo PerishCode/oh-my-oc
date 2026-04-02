@@ -15,10 +15,16 @@ jobs:
         include:
           - runner: ubuntu-latest
             target: x86_64-unknown-linux-gnu
+            archive_ext: tar.gz
           - runner: macos-latest
             target: aarch64-apple-darwin
+            archive_ext: tar.gz
           - runner: macos-latest
             target: x86_64-apple-darwin
+            archive_ext: tar.gz
+          - runner: windows-latest
+            target: x86_64-pc-windows-msvc
+            archive_ext: zip
     runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v5
@@ -36,14 +42,27 @@ jobs:
           dist="dist/${version}"
           mkdir -p "$dist"
           bin="oh-my-oc"
-          tarball="oh-my-oc-${{ matrix.target }}.tar.gz"
+          archive="oh-my-oc-${{ matrix.target }}.${{ matrix.archive_ext }}"
           cp "app/target/${{ matrix.target }}/release/oh-my-oc" "$dist/$bin"
-          tar -czf "$dist/$tarball" -C "$dist" "$bin"
+          tar -czf "$dist/$archive" -C "$dist" "$bin"
           rm -f "$dist/$bin"
+        if: runner.os != 'Windows'
+      - name: Package artifact
+        shell: pwsh
+        if: runner.os == 'Windows'
+        run: |
+          $version = "${env:GITHUB_REF_NAME}"
+          $dist = "dist/$version"
+          New-Item -ItemType Directory -Force -Path $dist | Out-Null
+          $bin = "oh-my-oc.exe"
+          $archive = "oh-my-oc-${{ matrix.target }}.${{ matrix.archive_ext }}"
+          Copy-Item "app/target/${{ matrix.target }}/release/oh-my-oc.exe" "$dist/$bin"
+          Compress-Archive -LiteralPath "$dist/$bin" -DestinationPath "$dist/$archive" -Force
+          Remove-Item "$dist/$bin"
       - uses: actions/upload-artifact@v7
         with:
           name: release-${{ matrix.target }}
-          path: dist/${{ github.ref_name }}/oh-my-oc-${{ matrix.target }}.tar.gz
+          path: dist/${{ github.ref_name }}/oh-my-oc-${{ matrix.target }}.${{ matrix.archive_ext }}
 
   publish:
     needs: build
@@ -60,7 +79,7 @@ jobs:
           set -eu
           cd "dist/${GITHUB_REF_NAME}"
           printf 'VERSION: %s\n' "${GITHUB_REF_NAME}" > checksums.txt
-          sha256sum *.tar.gz >> checksums.txt
+          sha256sum *.tar.gz *.zip >> checksums.txt
       - name: Publish release assets
         env:
           GH_TOKEN: ${{ github.token }}
@@ -69,6 +88,7 @@ jobs:
           gh release create "${GITHUB_REF_NAME}" \
             --repo "${GITHUB_REPOSITORY}" \
             dist/${GITHUB_REF_NAME}/*.tar.gz \
+            dist/${GITHUB_REF_NAME}/*.zip \
             dist/${GITHUB_REF_NAME}/checksums.txt \
             --title "${GITHUB_REF_NAME}" \
             --notes "${GITHUB_REF_NAME}"
