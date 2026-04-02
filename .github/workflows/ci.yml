@@ -7,8 +7,8 @@ on:
     branches: [main]
 
 jobs:
-  ci:
-    name: CI
+  matrix-ci:
+    name: CI (${{ matrix.os }})
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest]
@@ -21,3 +21,10 @@ jobs:
       - name: Check CLI
         working-directory: app
         run: cargo check --locked
+
+  ci:
+    name: CI
+    needs: matrix-ci
+    runs-on: ubuntu-latest
+    steps:
+      - run: true
