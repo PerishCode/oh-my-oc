@@ -7,9 +7,12 @@ on:
     branches: [main]
 
 jobs:
-  ci:
-    name: CI
-    runs-on: ubuntu-latest
+  matrix-ci:
+    name: CI (${{ matrix.os }})
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v5
       - uses: dtolnay/rust-toolchain@stable
@@ -18,3 +21,10 @@ jobs:
       - name: Check CLI
         working-directory: app
         run: cargo check --locked
+
+  ci:
+    name: CI
+    needs: matrix-ci
+    runs-on: ubuntu-latest
+    steps:
+      - run: true
