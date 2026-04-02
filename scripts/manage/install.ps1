@@ -1,31 +1,5 @@
 $ErrorActionPreference = 'Stop'
 
-function Add-UserPathEntry {
-    param([string]$Entry)
-
-    $current = [Environment]::GetEnvironmentVariable('Path', 'User')
-    $parts = @()
-    if (-not [string]::IsNullOrWhiteSpace($current)) {
-        $parts = $current.Split(';', [System.StringSplitOptions]::RemoveEmptyEntries)
-    }
-
-    foreach ($part in $parts) {
-        if ($part.TrimEnd('\\') -eq $Entry.TrimEnd('\\')) {
-            if (-not (($env:Path -split ';') | Where-Object { $_.TrimEnd('\\') -eq $Entry.TrimEnd('\\') })) {
-                $env:Path = "$Entry;$env:Path"
-            }
-            return $false
-        }
-    }
-
-    $updated = if ([string]::IsNullOrWhiteSpace($current)) { $Entry } else { "$current;$Entry" }
-    [Environment]::SetEnvironmentVariable('Path', $updated, 'User')
-    if (-not (($env:Path -split ';') | Where-Object { $_.TrimEnd('\\') -eq $Entry.TrimEnd('\\') })) {
-        $env:Path = "$Entry;$env:Path"
-    }
-    return $true
-}
-
 $name = if ($env:OH_MY_OC_NAME) { $env:OH_MY_OC_NAME } else { 'oh-my-oc' }
 $repo = if ($env:OH_MY_OC_REPO) { $env:OH_MY_OC_REPO } else { 'PerishCode/oh-my-oc' }
 $baseUrl = if ($env:OH_MY_OC_BASE_URL) { $env:OH_MY_OC_BASE_URL } else { "https://github.com/$repo/releases" }
@@ -107,12 +81,8 @@ try {
     Copy-Item -LiteralPath (Join-Path $tmpdir "$name.exe") -Destination (Join-Path $installDir "$name.exe") -Force
     Copy-Item -LiteralPath (Join-Path $installDir "$name.exe") -Destination (Join-Path $localBinDir "$name.exe") -Force
 
-    $pathUpdated = Add-UserPathEntry -Entry $localBinDir
-
     Write-Output (Join-Path $localBinDir "$name.exe")
-    if ($pathUpdated) {
-        Write-Output "Added $localBinDir to the user PATH. Open a new terminal to use oh-my-oc directly."
-    }
+    Write-Output "Add $localBinDir to your PATH using your preferred shell or environment manager to run oh-my-oc directly."
 }
 finally {
     Remove-Item -LiteralPath $tmpdir -Recurse -Force -ErrorAction SilentlyContinue

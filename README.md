@@ -39,7 +39,7 @@ Pin a release:
 
 The PowerShell installer uses `OH_MY_OC_REPO`, `OH_MY_OC_BASE_URL`, `OH_MY_OC_INSTALL_ROOT`, and `OH_MY_OC_LOCAL_BIN_DIR` when you need to override defaults.
 
-By default it installs versioned binaries under `%LOCALAPPDATA%\oh-my-oc\<version>` and puts `oh-my-oc.exe` in `%USERPROFILE%\.local\bin`. The installer adds that `bin` directory to the current user's `PATH`.
+By default it installs versioned binaries under `%LOCALAPPDATA%\oh-my-oc\<version>` and puts `oh-my-oc.exe` in `%USERPROFILE%\.local\bin`. The installer prints that `bin` directory so you can wire it into your PATH with your own shell or environment manager.
 
 ## `oh-my-oc patch`
 
