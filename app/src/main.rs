@@ -224,7 +224,7 @@ fn fetch_file(url: &str, output: &std::path::Path) -> Result<(), String> {
         return run_powershell(&[
             "-NoProfile",
             "-Command",
-            "Invoke-WebRequest -UseBasicParsing -Uri $args[0] -OutFile $args[1]",
+            "& { param($url, $destination) Invoke-WebRequest -UseBasicParsing -Uri $url -OutFile $destination }",
             url,
             &output.display().to_string(),
         ])
@@ -251,7 +251,7 @@ fn latest_patch_version() -> Result<String, String> {
         return powershell_output(&[
             "-NoProfile",
             "-Command",
-            "(Invoke-RestMethod -UseBasicParsing -Uri $args[0]).tag_name",
+            "& { param($url) (Invoke-RestMethod -UseBasicParsing -Uri $url).tag_name }",
             DEFAULT_PATCH_LATEST_API_URL,
         ])
         .map_err(|e| format!("failed to resolve latest patch release: {e}"));
@@ -286,7 +286,7 @@ fn extract_archive(tarball: &std::path::Path, dir: &std::path::Path) -> Result<(
         return run_powershell(&[
             "-NoProfile",
             "-Command",
-            "Expand-Archive -LiteralPath $args[0] -DestinationPath $args[1] -Force",
+            "& { param($archive, $destination) Expand-Archive -LiteralPath $archive -DestinationPath $destination -Force }",
             &tarball.display().to_string(),
             &dir.display().to_string(),
         ])
