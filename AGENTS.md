@@ -15,10 +15,7 @@ This repository is for personal use. Keep it simple and clean first; avoid over-
 
 - `app/`: minimal Rust CLI surface for `oh-my-oc`; keep it small and avoid overbuilding it.
 - `opencode.json`: root config; sets the schema, `openai/gpt-5.4`, full permission allow, and `default_agent: commander`.
-- `.opencode/package.json`: installs `@opencode-ai/plugin` for the local setup.
-- `.opencode/agent/`: contains the active agent role definitions.
 - `.gitignore`: ignores `.tmp/`.
-- `.opencode/.gitignore`: ignores local dependency files in `.opencode/`.
 
 ## Managed files policy
 
@@ -39,7 +36,6 @@ This repository is for personal use. Keep it simple and clean first; avoid over-
 - If a behavior must be reliably present for commander at runtime, prefer encoding it directly in `agent/commander.md` or another managed file instead of introducing extra runtime dependencies.
 - The current install flow is a tiny `install.sh` that fetches GitHub release artifacts; keep it minimal and do not add CI or broader release automation.
 - Preserve role boundaries: commander orchestrates, explorer gathers facts, coder implements, advisor reviews.
-- Prefer updating the source repository resources over adding local parallel copies.
 - Do not reintroduce deleted legacy files, extra layers, or unused clutter.
 - If agent behavior or repository layout changes, update this document at the same time so it stays accurate and compact.
 
