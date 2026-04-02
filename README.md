@@ -65,9 +65,10 @@ oh-my-oc patch --force
 
 Notes:
 
-- Default target: `~/.config/opencode` on Unix, `%APPDATA%\opencode` on Windows
+- Default target: `~/.config/opencode` on Unix and Windows
 - Override target path with `--path` or `OH_MY_OC_PATCH_PATH`
-- `--version` selects the resource release archive to fetch
+- By default `patch` fetches the latest `PerishCode/resources` release archive
+- `--version` selects a specific resource release archive to fetch
 - Override version with `--version` or `OH_MY_OC_PATCH_VERSION`
 - The patch flow downloads the official `PerishCode/resources` release archive: `oh-my-oc-<version>.tar.gz` on Unix, `oh-my-oc-<version>.zip` on Windows
 - The archive is expected to unpack with a top-level `oh-my-oc/opencode/` directory

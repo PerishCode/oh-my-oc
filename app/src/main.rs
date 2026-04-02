@@ -6,6 +6,8 @@ use std::process::Command;
 const CURRENT_VERSION: &str = env!("CARGO_PKG_VERSION");
 const DEFAULT_PATCH_RELEASE_BASE_URL: &str =
     "https://github.com/PerishCode/resources/releases/download";
+const DEFAULT_PATCH_LATEST_BASE_URL: &str =
+    "https://github.com/PerishCode/resources/releases/latest/download";
 
 #[cfg(windows)]
 const PATCH_ARCHIVE_EXTENSION: &str = "zip";
@@ -45,11 +47,9 @@ fn main() {
                 .or_else(|| std::env::var("OH_MY_OC_PATCH_PATH").ok())
                 .map(PathBuf::from)
                 .unwrap_or_else(default_patch_path);
-            let version = version
-                .or_else(|| std::env::var("OH_MY_OC_PATCH_VERSION").ok())
-                .unwrap_or_else(|| CURRENT_VERSION.to_string());
+            let version = version.or_else(|| std::env::var("OH_MY_OC_PATCH_VERSION").ok());
 
-            if let Err(error) = patch(&path, &version, force) {
+            if let Err(error) = patch(&path, version.as_deref(), force) {
                 fail(&format!("error: {error}"));
             }
         }
@@ -80,9 +80,10 @@ fn print_help(code: i32) -> ! {
 fn default_patch_path() -> PathBuf {
     #[cfg(windows)]
     {
-        let appdata =
-            std::env::var_os("APPDATA").unwrap_or_else(|| fail("error: APPDATA is not set"));
-        return PathBuf::from(appdata).join("opencode");
+        let home = std::env::var_os("HOME")
+            .or_else(|| std::env::var_os("USERPROFILE"))
+            .unwrap_or_else(|| fail("error: HOME or USERPROFILE is not set"));
+        return PathBuf::from(home).join(".config/opencode");
     }
 
     #[cfg(not(windows))]
@@ -92,12 +93,22 @@ fn default_patch_path() -> PathBuf {
     }
 }
 
-fn patch(target: &std::path::Path, version: &str, force: bool) -> Result<(), String> {
+fn patch(target: &std::path::Path, version: Option<&str>, force: bool) -> Result<(), String> {
     fs::create_dir_all(target)
         .map_err(|e| format!("failed to create {}: {}", target.display(), e))?;
 
-    let archive_name = format!("oh-my-oc-{version}.{PATCH_ARCHIVE_EXTENSION}");
-    let archive_url = format!("{DEFAULT_PATCH_RELEASE_BASE_URL}/{version}/{archive_name}");
+    let version = version.filter(|value| !value.is_empty());
+    let archive_name = match version {
+        Some(version) => format!("oh-my-oc-{version}.{PATCH_ARCHIVE_EXTENSION}"),
+        None => format!("oh-my-oc-latest.{PATCH_ARCHIVE_EXTENSION}"),
+    };
+    let archive_url = match version {
+        Some(version) => {
+            let release_archive = format!("oh-my-oc-{version}.{PATCH_ARCHIVE_EXTENSION}");
+            format!("{DEFAULT_PATCH_RELEASE_BASE_URL}/{version}/{release_archive}")
+        }
+        None => format!("{DEFAULT_PATCH_LATEST_BASE_URL}/oh-my-oc.{PATCH_ARCHIVE_EXTENSION}"),
+    };
     let tmpdir = temp_dir()?;
     let archive = tmpdir.join(&archive_name);
 
