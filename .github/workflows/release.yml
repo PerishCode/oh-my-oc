@@ -9,22 +9,38 @@ permissions:
   contents: write
 
 jobs:
+  validate:
+    if: ${{ !contains(github.ref_name, '-beta.') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Validate stable version
+        run: |
+          set -eu
+          cargo_version=$(sed -n 's/^version = "\(.*\)"$/\1/p' app/Cargo.toml | head -n 1)
+          [ "v$cargo_version" = "${GITHUB_REF_NAME}" ] || {
+            printf 'version mismatch: Cargo.toml=%s tag=%s\n' "v$cargo_version" "${GITHUB_REF_NAME}" >&2
+            exit 1
+          }
+
   build:
+    if: ${{ !contains(github.ref_name, '-beta.') }}
+    needs: validate
     strategy:
       matrix:
         include:
           - runner: ubuntu-latest
             target: x86_64-unknown-linux-gnu
-            archive_ext: tar.gz
+            archive: oh-my-oc-x86_64-unknown-linux-gnu.tar.gz
           - runner: macos-latest
             target: aarch64-apple-darwin
-            archive_ext: tar.gz
+            archive: oh-my-oc-aarch64-apple-darwin.tar.gz
           - runner: macos-latest
             target: x86_64-apple-darwin
-            archive_ext: tar.gz
+            archive: oh-my-oc-x86_64-apple-darwin.tar.gz
           - runner: windows-latest
             target: x86_64-pc-windows-msvc
-            archive_ext: zip
+            archive: oh-my-oc-x86_64-pc-windows-msvc.zip
     runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v5
@@ -32,62 +48,51 @@ jobs:
         with:
           toolchain: stable
           targets: ${{ matrix.target }}
-      - name: Build release binary
-        working-directory: app
-        run: cargo build --locked --release --target ${{ matrix.target }}
-      - name: Package artifact
-        run: |
-          set -eu
-          version="${GITHUB_REF_NAME}"
-          dist="dist/${version}"
-          mkdir -p "$dist"
-          bin="oh-my-oc"
-          archive="oh-my-oc-${{ matrix.target }}.${{ matrix.archive_ext }}"
-          cp "app/target/${{ matrix.target }}/release/oh-my-oc" "$dist/$bin"
-          tar -czf "$dist/$archive" -C "$dist" "$bin"
-          rm -f "$dist/$bin"
+      - name: Package release artifacts
         if: runner.os != 'Windows'
-      - name: Package artifact
+        env:
+          TARGET: ${{ matrix.target }}
+        run: scripts/release/package.sh "${GITHUB_REF_NAME}"
+      - name: Package release artifacts
         shell: pwsh
         if: runner.os == 'Windows'
-        run: |
-          $version = "${env:GITHUB_REF_NAME}"
-          $dist = "dist/$version"
-          New-Item -ItemType Directory -Force -Path $dist | Out-Null
-          $bin = "oh-my-oc.exe"
-          $archive = "oh-my-oc-${{ matrix.target }}.${{ matrix.archive_ext }}"
-          Copy-Item "app/target/${{ matrix.target }}/release/oh-my-oc.exe" "$dist/$bin"
-          Compress-Archive -LiteralPath "$dist/$bin" -DestinationPath "$dist/$archive" -Force
-          Remove-Item "$dist/$bin"
-      - uses: actions/upload-artifact@v7
+        env:
+          TARGET: ${{ matrix.target }}
+        run: ./scripts/release/package.ps1 "${env:GITHUB_REF_NAME}"
+      - uses: actions/upload-artifact@v4
         with:
           name: release-${{ matrix.target }}
-          path: dist/${{ github.ref_name }}/oh-my-oc-${{ matrix.target }}.${{ matrix.archive_ext }}
+          path: dist/${{ github.ref_name }}/${{ matrix.archive }}
+      - uses: actions/upload-artifact@v4
+        if: runner.os == 'Linux'
+        with:
+          name: release-support-assets
+          path: |
+            dist/${{ github.ref_name }}/skill.zip
+            dist/${{ github.ref_name }}/skill.tar.gz
 
   publish:
+    if: ${{ !contains(github.ref_name, '-beta.') }}
     needs: build
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
       - uses: actions/checkout@v5
-      - uses: actions/download-artifact@v8
+      - uses: actions/download-artifact@v4
         with:
           path: dist/${{ github.ref_name }}
           merge-multiple: true
-      - name: Package skill asset
-        run: |
-          set -eu
-          version="${GITHUB_REF_NAME}"
-          dist="dist/${version}"
-          (cd artifacts/skill && zip -qr "$GITHUB_WORKSPACE/$dist/skill.zip" oh-my-oc)
-          (cd artifacts/skill && tar -czf "$GITHUB_WORKSPACE/$dist/skill.tar.gz" oh-my-oc)
       - name: Create checksums
         run: |
           set -eu
           cd "dist/${GITHUB_REF_NAME}"
           printf 'VERSION: %s\n' "${GITHUB_REF_NAME}" > checksums.txt
           sha256sum *.tar.gz *.zip >> checksums.txt
+      - name: Accept release assets
+        run: sh scripts/release/verify.sh accept "${GITHUB_REF_NAME}" "dist/${GITHUB_REF_NAME}"
+      - name: Verify release archives
+        run: sh scripts/release/verify.sh verify "${GITHUB_REF_NAME}" "dist/${GITHUB_REF_NAME}"
       - name: Publish release assets
         env:
           GH_TOKEN: ${{ github.token }}
