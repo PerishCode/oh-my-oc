@@ -59,11 +59,11 @@ jobs:
         env:
           TARGET: ${{ matrix.target }}
         run: ./scripts/release/package.ps1 "${env:GITHUB_REF_NAME}"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: release-${{ matrix.target }}
           path: dist/${{ github.ref_name }}/${{ matrix.archive }}
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         if: runner.os == 'Linux'
         with:
           name: release-support-assets
@@ -79,7 +79,7 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v5
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           path: dist/${{ github.ref_name }}
           merge-multiple: true
