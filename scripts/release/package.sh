@@ -21,10 +21,11 @@ tmpdir=$(mktemp -d)
 trap 'rm -rf "$tmpdir"' EXIT INT TERM
 cp "$BIN" "$tmpdir/$NAME"
 tar -C "$tmpdir" -czf "$ARTIFACT_DIR/$TARBALL" "$NAME"
-mkdir -p "$tmpdir/oh-my-oc"
-cp "$ROOT/artifacts/skill/oh-my-oc/SKILL.md" "$tmpdir/oh-my-oc/SKILL.md"
-(cd "$tmpdir" && zip -qr "$ARTIFACT_DIR/$SKILL_ZIP" oh-my-oc)
-(cd "$tmpdir" && tar -czf "$ARTIFACT_DIR/$SKILL_TAR_GZ" oh-my-oc)
+skilldir="$tmpdir/skill"
+mkdir -p "$skilldir/oh-my-oc"
+cp "$ROOT/artifacts/skill/oh-my-oc/SKILL.md" "$skilldir/oh-my-oc/SKILL.md"
+(cd "$skilldir" && zip -qr "$ARTIFACT_DIR/$SKILL_ZIP" oh-my-oc)
+(cd "$skilldir" && tar -czf "$ARTIFACT_DIR/$SKILL_TAR_GZ" oh-my-oc)
 (
   cd "$ARTIFACT_DIR"
   printf 'VERSION: %s\n' "$RELEASE_VERSION" > checksums.txt
