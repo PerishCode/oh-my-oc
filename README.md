@@ -5,7 +5,8 @@ Personal Opencode configuration and small Rust CLI workspace.
 ## Layout
 
 - `app/` - minimal distributable Rust CLI surface for `oh-my-oc`
-- `scripts/release/package.sh` / `scripts/release/package.ps1` - local packaging helpers for release artifacts
+- `scripts/release/package.sh` / `scripts/release/package.ps1` - packaging source of truth for release artifacts
+- `scripts/release/verify.sh` / `scripts/release/verify.ps1` - minimal release asset checks for accept/verify
 - `scripts/manage/install.sh` / `scripts/manage/install.ps1` - install scripts for Unix and Windows
 - root config - Opencode setup and agent definitions
 
@@ -16,6 +17,12 @@ The release path is intentionally simple:
 1. Run `scripts/release/package.sh <tag>` on Unix or `scripts/release/package.ps1 <tag>` on Windows to build the CLI and create release artifacts plus `checksums.txt` under `dist/<tag>/`.
 2. Publish those files as GitHub release assets.
 3. Install with `curl -fsSL https://raw.githubusercontent.com/PerishCode/oh-my-oc/main/scripts/manage/install.sh | sh`, or pass `--version <tag>` / `OH_MY_OC_VERSION=<tag>` to pin a release.
+
+## Release flow
+
+- Stable release: push a `vX.Y.Z` tag and let `.github/workflows/release.yml` publish it.
+- Beta release: run `.github/workflows/release-beta.yml` manually with a `vX.Y.Z-beta.N` version that matches `app/Cargo.toml`.
+- Beta publishes a GitHub prerelease and runs a small installer + skill smoke check on Unix and Windows before you promote the same line to a stable tag.
 
 The installer uses `OH_MY_OC_REPO`, `OH_MY_OC_BASE_URL`, `OH_MY_OC_INSTALL_ROOT`, and `OH_MY_OC_LOCAL_BIN_DIR` when you need to override defaults.
 

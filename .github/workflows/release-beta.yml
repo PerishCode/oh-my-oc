@@ -1,0 +1,180 @@
+name: Release Beta
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Beta version tag (for example v0.2.13-beta.1)
+        required: true
+        type: string
+      ref:
+        description: Git ref to release from
+        required: true
+        default: main
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.ref }}
+      - name: Validate beta version
+        run: |
+          set -eu
+          case "${{ inputs.version }}" in
+            v*-beta.*) ;;
+            *)
+              printf '%s\n' 'beta version must look like vX.Y.Z-beta.N' >&2
+              exit 1
+              ;;
+          esac
+          cargo_version=$(sed -n 's/^version = "\(.*\)"$/\1/p' app/Cargo.toml | head -n 1)
+          [ "v$cargo_version" = "${{ inputs.version }}" ] || {
+            printf 'version mismatch: Cargo.toml=%s input=%s\n' "v$cargo_version" "${{ inputs.version }}" >&2
+            exit 1
+          }
+
+  build:
+    needs: validate
+    strategy:
+      matrix:
+        include:
+          - runner: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            archive: oh-my-oc-x86_64-unknown-linux-gnu.tar.gz
+          - runner: macos-latest
+            target: aarch64-apple-darwin
+            archive: oh-my-oc-aarch64-apple-darwin.tar.gz
+          - runner: macos-latest
+            target: x86_64-apple-darwin
+            archive: oh-my-oc-x86_64-apple-darwin.tar.gz
+          - runner: windows-latest
+            target: x86_64-pc-windows-msvc
+            archive: oh-my-oc-x86_64-pc-windows-msvc.zip
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.ref }}
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+          targets: ${{ matrix.target }}
+      - name: Package release artifacts
+        if: runner.os != 'Windows'
+        env:
+          TARGET: ${{ matrix.target }}
+        run: scripts/release/package.sh "${{ inputs.version }}"
+      - name: Package release artifacts
+        shell: pwsh
+        if: runner.os == 'Windows'
+        env:
+          TARGET: ${{ matrix.target }}
+        run: ./scripts/release/package.ps1 "${{ inputs.version }}"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-${{ matrix.target }}
+          path: dist/${{ inputs.version }}/${{ matrix.archive }}
+      - uses: actions/upload-artifact@v4
+        if: runner.os == 'Linux'
+        with:
+          name: release-support-assets
+          path: |
+            dist/${{ inputs.version }}/skill.zip
+            dist/${{ inputs.version }}/skill.tar.gz
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.ref }}
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist/${{ inputs.version }}
+          merge-multiple: true
+      - name: Create checksums
+        run: |
+          set -eu
+          cd "dist/${{ inputs.version }}"
+          printf 'VERSION: %s\n' "${{ inputs.version }}" > checksums.txt
+          sha256sum *.tar.gz *.zip >> checksums.txt
+      - name: Accept release assets
+        run: sh scripts/release/verify.sh accept "${{ inputs.version }}" "dist/${{ inputs.version }}"
+      - name: Verify release archives
+        run: sh scripts/release/verify.sh verify "${{ inputs.version }}" "dist/${{ inputs.version }}"
+      - name: Publish prerelease assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -eu
+          gh release create "${{ inputs.version }}" \
+            --repo "${GITHUB_REPOSITORY}" \
+            --target "${{ inputs.ref }}" \
+            --prerelease \
+            dist/${{ inputs.version }}/*.tar.gz \
+            dist/${{ inputs.version }}/*.zip \
+            dist/${{ inputs.version }}/checksums.txt \
+            --title "${{ inputs.version }}" \
+            --notes "${{ inputs.version }}"
+
+  smoke:
+    needs: publish
+    strategy:
+      matrix:
+        include:
+          - runner: ubuntu-latest
+          - runner: windows-latest
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.ref }}
+      - name: Smoke beta install on Unix
+        if: runner.os != 'Windows'
+        run: |
+          set -eu
+          root=$(mktemp -d)
+          export HOME="$root/home"
+          export OH_MY_OC_INSTALL_ROOT="$root/install"
+          export OH_MY_OC_LOCAL_BIN_DIR="$root/bin"
+          mkdir -p "$HOME" "$OH_MY_OC_INSTALL_ROOT" "$OH_MY_OC_LOCAL_BIN_DIR"
+          output=$(sh scripts/manage/install.sh --version "${{ inputs.version }}")
+          printf '%s\n' "$output"
+          printf '%s\n' "$output" | grep 'skill.tar.gz' >/dev/null
+          test -x "$OH_MY_OC_INSTALL_ROOT/${{ inputs.version }}/oh-my-oc"
+          test -x "$OH_MY_OC_LOCAL_BIN_DIR/oh-my-oc"
+          mkdir -p "$HOME/.agents/skills"
+          curl -fsSL "https://github.com/${GITHUB_REPOSITORY}/releases/download/${{ inputs.version }}/skill.tar.gz" -o "$root/skill.tar.gz"
+          tar -xzf "$root/skill.tar.gz" -C "$HOME/.agents/skills"
+          test -f "$HOME/.agents/skills/oh-my-oc/SKILL.md"
+          "$OH_MY_OC_LOCAL_BIN_DIR/oh-my-oc" --help >/dev/null
+      - name: Smoke beta install on Windows
+        shell: pwsh
+        if: runner.os == 'Windows'
+        run: |
+          $root = Join-Path $env:TEMP ("oh-my-oc-beta-" + [guid]::NewGuid().ToString('N'))
+          $env:HOME = Join-Path $root 'home'
+          $env:OH_MY_OC_INSTALL_ROOT = Join-Path $root 'install'
+          $env:OH_MY_OC_LOCAL_BIN_DIR = Join-Path $root 'bin'
+          New-Item -ItemType Directory -Force -Path $env:HOME,$env:OH_MY_OC_INSTALL_ROOT,$env:OH_MY_OC_LOCAL_BIN_DIR | Out-Null
+          $output = ./scripts/manage/install.ps1 --version "${{ inputs.version }}"
+          $output | ForEach-Object { $_ }
+          if (-not ($output -join "`n" -match 'skill.zip')) { throw 'missing skill.zip hint in installer output' }
+          if (-not (Test-Path (Join-Path $env:OH_MY_OC_INSTALL_ROOT "${{ inputs.version }}/oh-my-oc.exe"))) { throw 'missing installed binary' }
+          if (-not (Test-Path (Join-Path $env:OH_MY_OC_LOCAL_BIN_DIR 'oh-my-oc.exe'))) { throw 'missing local bin copy' }
+          $skillsDir = Join-Path $env:HOME '.agents\skills'
+          New-Item -ItemType Directory -Force -Path $skillsDir | Out-Null
+          $skillZip = Join-Path $root 'skill.zip'
+          Invoke-WebRequest -UseBasicParsing -Uri "https://github.com/$env:GITHUB_REPOSITORY/releases/download/${{ inputs.version }}/skill.zip" -OutFile $skillZip
+          Expand-Archive -LiteralPath $skillZip -DestinationPath $skillsDir -Force
+          if (-not (Test-Path (Join-Path $skillsDir 'oh-my-oc/SKILL.md'))) { throw 'missing extracted skill file' }
+          & (Join-Path $env:OH_MY_OC_LOCAL_BIN_DIR 'oh-my-oc.exe') --help | Out-Null
