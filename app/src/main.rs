@@ -1,7 +1,10 @@
 use std::ffi::OsString;
 use std::fs;
+#[cfg(windows)]
 use std::fs::File;
 use std::path::PathBuf;
+#[cfg(not(windows))]
+use std::process::Command;
 
 const CURRENT_VERSION: &str = env!("CARGO_PKG_VERSION");
 const DEFAULT_PATCH_RELEASE_BASE_URL: &str =
