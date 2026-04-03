@@ -15,7 +15,7 @@ export OH_MY_OC_INSTALL_ROOT="$tmpdir/install"
 export OH_MY_OC_LOCAL_BIN_DIR="$tmpdir/bin"
 mkdir -p "$HOME" "$OH_MY_OC_INSTALL_ROOT" "$OH_MY_OC_LOCAL_BIN_DIR"
 
-sh "$ROOT/scripts/manage/install.sh" --version "$VERSION"
+sh "$ROOT/scripts/manage/omo.sh" install --version "$VERSION"
 
 test -x "$OH_MY_OC_INSTALL_ROOT/$VERSION/oh-my-oc"
 test -x "$OH_MY_OC_LOCAL_BIN_DIR/oh-my-oc"

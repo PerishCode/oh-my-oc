@@ -6,6 +6,12 @@ REPO=${OH_MY_OC_REPO:-PerishCode/oh-my-oc}
 BASE_URL=${OH_MY_OC_BASE_URL:-https://github.com/$REPO/releases}
 INSTALL_ROOT=${OH_MY_OC_INSTALL_ROOT:-"$HOME/.local/share/$NAME"}
 LOCAL_BIN_DIR=${OH_MY_OC_LOCAL_BIN_DIR:-"$HOME/.local/bin"}
+COMMAND=${1:-install}
+
+if [ "$#" -gt 0 ]; then
+  shift
+fi
+
 VERSION=${OH_MY_OC_VERSION:-}
 
 while [ "$#" -gt 0 ]; do
@@ -22,6 +28,26 @@ while [ "$#" -gt 0 ]; do
   esac
   shift
 done
+
+case "$COMMAND" in
+  install|upgrade)
+    ;;
+  uninstall)
+    if [ -L "$LOCAL_BIN_DIR/$NAME" ] || [ -e "$LOCAL_BIN_DIR/$NAME" ]; then
+      rm -f "$LOCAL_BIN_DIR/$NAME"
+    fi
+    if [ -n "$VERSION" ] && [ -e "$INSTALL_ROOT/$VERSION" ]; then
+      rm -rf "$INSTALL_ROOT/$VERSION"
+    elif [ -z "$VERSION" ] && [ -d "$INSTALL_ROOT" ]; then
+      rm -rf "$INSTALL_ROOT"
+    fi
+    exit 0
+    ;;
+  *)
+    printf '%s\n' "unknown command: $COMMAND" >&2
+    exit 1
+    ;;
+esac
 
 case "$(uname -s)-$(uname -m)" in
   Darwin-arm64)
@@ -90,7 +116,3 @@ install -m 755 "$tmpdir/$NAME" "$INSTALL_DIR/$NAME"
 ln -sf "$INSTALL_DIR/$NAME" "$LOCAL_BIN_DIR/$NAME"
 
 printf '%s\n' "$LOCAL_BIN_DIR/$NAME"
-skill_url="$BASE_URL/download/$VERSION/skill.tar.gz"
-printf '%s\n' "Optional: install the oh-my-oc skill for agents with:"
-printf '%s\n' "mkdir -p \"\$HOME/.agents/skills\" && curl -fsSL \"$skill_url\" -o \"/tmp/oh-my-oc-skill.tar.gz\" && tar -xzf \"/tmp/oh-my-oc-skill.tar.gz\" -C \"\$HOME/.agents/skills\""
-printf '%s\n' "This installs agent guidance only, not the binary."

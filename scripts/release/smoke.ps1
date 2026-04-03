@@ -15,7 +15,7 @@ try {
     $env:OH_MY_OC_LOCAL_BIN_DIR = Join-Path $tmpdir 'bin'
     New-Item -ItemType Directory -Force -Path $env:HOME,$env:OH_MY_OC_INSTALL_ROOT,$env:OH_MY_OC_LOCAL_BIN_DIR | Out-Null
 
-    & (Join-Path $root 'scripts/manage/install.ps1') --version $version
+    & (Join-Path $root 'scripts/manage/omo.ps1') install --version $version
 
     if (-not (Test-Path -LiteralPath (Join-Path $env:OH_MY_OC_INSTALL_ROOT "$version/oh-my-oc.exe") -PathType Leaf)) { throw 'missing installed binary' }
     if (-not (Test-Path -LiteralPath (Join-Path $env:OH_MY_OC_LOCAL_BIN_DIR 'oh-my-oc.exe') -PathType Leaf)) { throw 'missing local bin copy' }

@@ -1,24 +1,50 @@
 # oh-my-oc
 
-Personal Opencode configuration and small Rust CLI workspace.
+Small, personal-use Opencode config patcher with a tiny Rust CLI and simple `omo` installers.
 
 ## Layout
 
 - `app/` - minimal distributable Rust CLI surface for `oh-my-oc`
 - `scripts/release/package.sh` / `scripts/release/package.ps1` - packaging source of truth for release artifacts
 - `scripts/release/verify.sh` / `scripts/release/verify.ps1` - minimal release asset checks for accept/verify
-- `scripts/manage/install.sh` / `scripts/manage/install.ps1` - install scripts for Unix and Windows
+- `scripts/manage/omo.sh` / `scripts/manage/omo.ps1` - primary install, upgrade, and uninstall entrypoints
 - root config - Opencode setup and agent definitions
 
-## Local install loop
+## OMO install
+
+The recommended entrypoint is the `omo` script for your platform:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/PerishCode/oh-my-oc/main/scripts/manage/omo.sh | sh -s -- install
+```
+
+```powershell
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/PerishCode/oh-my-oc/main/scripts/manage/omo.ps1))) install
+```
+
+Use `upgrade` to reinstall the latest release, or pass `--version <tag>` to pin a release.
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/PerishCode/oh-my-oc/main/scripts/manage/omo.sh | sh -s -- upgrade
+curl -fsSL https://raw.githubusercontent.com/PerishCode/oh-my-oc/main/scripts/manage/omo.sh | sh -s -- install --version v0.3.0
+curl -fsSL https://raw.githubusercontent.com/PerishCode/oh-my-oc/main/scripts/manage/omo.sh | sh -s -- uninstall
+```
+
+```powershell
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/PerishCode/oh-my-oc/main/scripts/manage/omo.ps1))) upgrade
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/PerishCode/oh-my-oc/main/scripts/manage/omo.ps1))) install --version v0.3.0
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/PerishCode/oh-my-oc/main/scripts/manage/omo.ps1))) uninstall
+```
+
+The installer still honors `OH_MY_OC_REPO`, `OH_MY_OC_BASE_URL`, `OH_MY_OC_INSTALL_ROOT`, `OH_MY_OC_LOCAL_BIN_DIR`, and `OH_MY_OC_VERSION`.
+
+## Release flow
 
 The release path is intentionally simple:
 
 1. Run `scripts/release/package.sh <tag>` on Unix or `scripts/release/package.ps1 <tag>` on Windows to build the CLI and create release artifacts plus `checksums.txt` under `dist/<tag>/`.
 2. Publish those files as GitHub release assets.
-3. Install with `curl -fsSL https://raw.githubusercontent.com/PerishCode/oh-my-oc/main/scripts/manage/install.sh | sh`, or pass `--version <tag>` / `OH_MY_OC_VERSION=<tag>` to pin a release.
-
-## Release flow
+3. Install with the remote `omo` script for your platform.
 
 - Stable release: push a `vX.Y.Z` tag and let `.github/workflows/release.yml` publish it.
 - Beta release: run `.github/workflows/release-beta.yml` manually with a `vX.Y.Z-beta.N` version that matches `app/Cargo.toml`.
@@ -35,13 +61,13 @@ Release assets are produced for Linux x86_64, macOS x86_64/aarch64, and Windows 
 Install from PowerShell:
 
 ```powershell
-irm https://raw.githubusercontent.com/PerishCode/oh-my-oc/main/scripts/manage/install.ps1 | iex
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/PerishCode/oh-my-oc/main/scripts/manage/omo.ps1))) install
 ```
 
 Pin a release:
 
 ```powershell
-& ([scriptblock]::Create((irm https://raw.githubusercontent.com/PerishCode/oh-my-oc/main/scripts/manage/install.ps1))) --version v0.2.10
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/PerishCode/oh-my-oc/main/scripts/manage/omo.ps1))) install --version v0.3.0
 ```
 
 The PowerShell installer uses `OH_MY_OC_REPO`, `OH_MY_OC_BASE_URL`, `OH_MY_OC_INSTALL_ROOT`, and `OH_MY_OC_LOCAL_BIN_DIR` when you need to override defaults.
@@ -53,7 +79,7 @@ By default it installs versioned binaries under `%LOCALAPPDATA%\oh-my-oc\<versio
 Install the current release, then apply the patch into your Opencode config:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/PerishCode/oh-my-oc/main/scripts/manage/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/PerishCode/oh-my-oc/main/scripts/manage/omo.sh | sh -s -- install
 oh-my-oc patch
 ```
 

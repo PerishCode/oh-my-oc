@@ -5,21 +5,42 @@ $repo = if ($env:OH_MY_OC_REPO) { $env:OH_MY_OC_REPO } else { 'PerishCode/oh-my-
 $baseUrl = if ($env:OH_MY_OC_BASE_URL) { $env:OH_MY_OC_BASE_URL } else { "https://github.com/$repo/releases" }
 $installRoot = if ($env:OH_MY_OC_INSTALL_ROOT) { $env:OH_MY_OC_INSTALL_ROOT } else { Join-Path $env:LOCALAPPDATA $name }
 $localBinDir = if ($env:OH_MY_OC_LOCAL_BIN_DIR) { $env:OH_MY_OC_LOCAL_BIN_DIR } else { Join-Path $env:USERPROFILE '.local\bin' }
+$command = if ($args.Length -gt 0) { $args[0] } else { 'install' }
 $version = $env:OH_MY_OC_VERSION
+$remainingArgs = @()
 
-for ($i = 0; $i -lt $args.Length; $i++) {
-    switch ($args[$i]) {
+if ($args.Length -gt 1) {
+    $remainingArgs = $args[1..($args.Length - 1)]
+}
+
+for ($i = 0; $i -lt $remainingArgs.Length; $i++) {
+    switch ($remainingArgs[$i]) {
         '--version' {
             $i++
-            if ($i -ge $args.Length -or [string]::IsNullOrWhiteSpace($args[$i])) {
+            if ($i -ge $remainingArgs.Length -or [string]::IsNullOrWhiteSpace($remainingArgs[$i])) {
                 throw 'missing value for --version'
             }
-            $version = $args[$i]
+            $version = $remainingArgs[$i]
         }
         default {
-            throw "unknown argument: $($args[$i])"
+            throw "unknown argument: $($remainingArgs[$i])"
         }
     }
+}
+
+switch ($command) {
+    'install' { }
+    'upgrade' { }
+    'uninstall' {
+        Remove-Item -LiteralPath (Join-Path $localBinDir "$name.exe") -Force -ErrorAction SilentlyContinue
+        if ($version) {
+            Remove-Item -LiteralPath (Join-Path $installRoot $version) -Recurse -Force -ErrorAction SilentlyContinue
+        } elseif (Test-Path $installRoot) {
+            Remove-Item -LiteralPath $installRoot -Recurse -Force -ErrorAction SilentlyContinue
+        }
+        return
+    }
+    default { throw "unknown command: $command" }
 }
 
 $target = switch ("$($env:PROCESSOR_ARCHITECTURE)") {
@@ -81,17 +102,7 @@ try {
     Copy-Item -LiteralPath (Join-Path $tmpdir "$name.exe") -Destination (Join-Path $installDir "$name.exe") -Force
     Copy-Item -LiteralPath (Join-Path $installDir "$name.exe") -Destination (Join-Path $localBinDir "$name.exe") -Force
 
-    $skillUrl = "$baseUrl/download/$version/skill.zip"
-    $skillZipPath = Join-Path $env:TEMP 'oh-my-oc-skill.zip'
     Write-Output (Join-Path $localBinDir "$name.exe")
-    Write-Output 'Optional: install the oh-my-oc skill for agents with:'
-    Write-Output '$skillsDir = Join-Path $HOME ''.agents\skills'''
-    Write-Output '$skillZipPath = Join-Path $env:TEMP ''oh-my-oc-skill.zip'''
-    Write-Output 'New-Item -ItemType Directory -Force -Path $skillsDir | Out-Null'
-    Write-Output "Invoke-WebRequest -UseBasicParsing -Uri '$skillUrl' -OutFile '$skillZipPath'"
-    Write-Output 'Expand-Archive -LiteralPath $skillZipPath -DestinationPath $skillsDir -Force'
-    Write-Output 'This installs agent guidance only, not the binary.'
-    Write-Output "Add $localBinDir to your PATH using your preferred shell or environment manager to run oh-my-oc directly."
 }
 finally {
     Remove-Item -LiteralPath $tmpdir -Recurse -Force -ErrorAction SilentlyContinue
