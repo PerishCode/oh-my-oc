@@ -70,10 +70,17 @@ jobs:
     permissions:
       contents: write
     steps:
+      - uses: actions/checkout@v5
       - uses: actions/download-artifact@v8
         with:
           path: dist/${{ github.ref_name }}
           merge-multiple: true
+      - name: Package skill asset
+        run: |
+          set -eu
+          version="${GITHUB_REF_NAME}"
+          dist="dist/${version}"
+          (cd artifacts/skill && zip -qr "$GITHUB_WORKSPACE/$dist/skill.zip" oh-my-oc)
       - name: Create checksums
         run: |
           set -eu
