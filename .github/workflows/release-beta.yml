@@ -33,9 +33,14 @@ jobs:
               exit 1
               ;;
           esac
+          beta_base_version=$(printf '%s\n' "${{ inputs.version }}" | sed -n 's/^v\([0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*\)-beta\.[0-9][0-9]*$/\1/p')
+          [ -n "$beta_base_version" ] || {
+            printf '%s\n' 'beta version must look like vX.Y.Z-beta.N' >&2
+            exit 1
+          }
           cargo_version=$(sed -n 's/^version = "\(.*\)"$/\1/p' app/Cargo.toml | head -n 1)
-          [ "v$cargo_version" = "${{ inputs.version }}" ] || {
-            printf 'version mismatch: Cargo.toml=%s input=%s\n' "v$cargo_version" "${{ inputs.version }}" >&2
+          [ "$cargo_version" = "$beta_base_version" ] || {
+            printf 'version mismatch: Cargo.toml=%s beta base=%s\n' "$cargo_version" "$beta_base_version" >&2
             exit 1
           }
 

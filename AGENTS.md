@@ -34,7 +34,7 @@ This repository is for personal use. Keep it simple and clean first; avoid over-
 - Treat `app/` as a small distributable CLI surface, not a place for heavy architecture.
 - Keep patch behavior constrained to the managed files policy above.
 - If a behavior must be reliably present for commander at runtime, prefer encoding it directly in `agent/commander.md` or another managed file instead of introducing extra runtime dependencies.
-- The current install flow is intentionally tiny: `install.sh` for Unix and `install.ps1` for Windows fetch GitHub release artifacts; local packaging helpers should stay equally minimal.
+- The current install flow is intentionally tiny: `scripts/manage/omo.sh` for Unix and `scripts/manage/omo.ps1` for Windows fetch GitHub release artifacts; local packaging helpers should stay equally minimal.
 - Release-affecting changes should go through a beta prerelease first, then stable once the same line is verified.
 - Keep release packaging logic sourced from `scripts/release/package.sh` and `scripts/release/package.ps1`; do not duplicate it elsewhere.
 - Use the release verify/smoke checks to catch asset or install drift before promoting.
