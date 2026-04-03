@@ -140,41 +140,8 @@ jobs:
           ref: ${{ inputs.ref }}
       - name: Smoke beta install on Unix
         if: runner.os != 'Windows'
-        run: |
-          set -eu
-          root=$(mktemp -d)
-          export HOME="$root/home"
-          export OH_MY_OC_INSTALL_ROOT="$root/install"
-          export OH_MY_OC_LOCAL_BIN_DIR="$root/bin"
-          mkdir -p "$HOME" "$OH_MY_OC_INSTALL_ROOT" "$OH_MY_OC_LOCAL_BIN_DIR"
-          output=$(sh scripts/manage/install.sh --version "${{ inputs.version }}")
-          printf '%s\n' "$output"
-          printf '%s\n' "$output" | grep 'skill.tar.gz' >/dev/null
-          test -x "$OH_MY_OC_INSTALL_ROOT/${{ inputs.version }}/oh-my-oc"
-          test -x "$OH_MY_OC_LOCAL_BIN_DIR/oh-my-oc"
-          mkdir -p "$HOME/.agents/skills"
-          curl -fsSL "https://github.com/${GITHUB_REPOSITORY}/releases/download/${{ inputs.version }}/skill.tar.gz" -o "$root/skill.tar.gz"
-          tar -xzf "$root/skill.tar.gz" -C "$HOME/.agents/skills"
-          test -f "$HOME/.agents/skills/oh-my-oc/SKILL.md"
-          "$OH_MY_OC_LOCAL_BIN_DIR/oh-my-oc" --help >/dev/null
+        run: sh scripts/release/smoke.sh "${{ inputs.version }}"
       - name: Smoke beta install on Windows
         shell: pwsh
         if: runner.os == 'Windows'
-        run: |
-          $root = Join-Path $env:TEMP ("oh-my-oc-beta-" + [guid]::NewGuid().ToString('N'))
-          $env:HOME = Join-Path $root 'home'
-          $env:OH_MY_OC_INSTALL_ROOT = Join-Path $root 'install'
-          $env:OH_MY_OC_LOCAL_BIN_DIR = Join-Path $root 'bin'
-          New-Item -ItemType Directory -Force -Path $env:HOME,$env:OH_MY_OC_INSTALL_ROOT,$env:OH_MY_OC_LOCAL_BIN_DIR | Out-Null
-          $output = ./scripts/manage/install.ps1 --version "${{ inputs.version }}"
-          $output | ForEach-Object { $_ }
-          if (-not ($output -join "`n" -match 'skill.zip')) { throw 'missing skill.zip hint in installer output' }
-          if (-not (Test-Path (Join-Path $env:OH_MY_OC_INSTALL_ROOT "${{ inputs.version }}/oh-my-oc.exe"))) { throw 'missing installed binary' }
-          if (-not (Test-Path (Join-Path $env:OH_MY_OC_LOCAL_BIN_DIR 'oh-my-oc.exe'))) { throw 'missing local bin copy' }
-          $skillsDir = Join-Path $env:HOME '.agents\skills'
-          New-Item -ItemType Directory -Force -Path $skillsDir | Out-Null
-          $skillZip = Join-Path $root 'skill.zip'
-          Invoke-WebRequest -UseBasicParsing -Uri "https://github.com/$env:GITHUB_REPOSITORY/releases/download/${{ inputs.version }}/skill.zip" -OutFile $skillZip
-          Expand-Archive -LiteralPath $skillZip -DestinationPath $skillsDir -Force
-          if (-not (Test-Path (Join-Path $skillsDir 'oh-my-oc/SKILL.md'))) { throw 'missing extracted skill file' }
-          & (Join-Path $env:OH_MY_OC_LOCAL_BIN_DIR 'oh-my-oc.exe') --help | Out-Null
+        run: ./scripts/release/smoke.ps1 "${{ inputs.version }}"
