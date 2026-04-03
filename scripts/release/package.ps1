@@ -16,6 +16,7 @@ cargo build --release --manifest-path $cargoToml --target $target
 
 $archive = "$name-$target.zip"
 $skillZip = 'skill.zip'
+$skillTarGz = 'skill.tar.gz'
 $tmpdir = Join-Path ([System.IO.Path]::GetTempPath()) ("$name-" + [System.Guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $tmpdir | Out-Null
 
@@ -26,15 +27,18 @@ try {
     New-Item -ItemType Directory -Force -Path (Join-Path $tmpdir 'oh-my-oc') | Out-Null
     Copy-Item (Join-Path $root 'artifacts/skill/oh-my-oc/SKILL.md') (Join-Path $tmpdir 'oh-my-oc/SKILL.md')
     Compress-Archive -LiteralPath (Join-Path $tmpdir 'oh-my-oc') -DestinationPath (Join-Path $artifactDir $skillZip) -Force
+    tar -czf (Join-Path $artifactDir $skillTarGz) -C $tmpdir oh-my-oc
     $hash = (Get-FileHash -Algorithm SHA256 -Path (Join-Path $artifactDir $archive)).Hash.ToLowerInvariant()
     Set-Content -Path (Join-Path $artifactDir 'checksums.txt') -Value @(
         "VERSION: $releaseVersion"
         "$hash  $archive"
         ((Get-FileHash -Algorithm SHA256 -Path (Join-Path $artifactDir $skillZip)).Hash.ToLowerInvariant() + "  $skillZip")
+        ((Get-FileHash -Algorithm SHA256 -Path (Join-Path $artifactDir $skillTarGz)).Hash.ToLowerInvariant() + "  $skillTarGz")
     )
 
     Write-Output (Join-Path $artifactDir $archive)
     Write-Output (Join-Path $artifactDir $skillZip)
+    Write-Output (Join-Path $artifactDir $skillTarGz)
     Write-Output (Join-Path $artifactDir 'checksums.txt')
 }
 finally {

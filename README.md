@@ -21,7 +21,7 @@ The installer uses `OH_MY_OC_REPO`, `OH_MY_OC_BASE_URL`, `OH_MY_OC_INSTALL_ROOT`
 
 Latest mode fetches release assets from the GitHub Releases `latest/download/` path.
 
-Release assets are produced for Linux x86_64, macOS x86_64/aarch64, and Windows x86_64. Each release also includes `skill.zip`, which unpacks to `oh-my-oc/SKILL.md` for optional agent guidance.
+Release assets are produced for Linux x86_64, macOS x86_64/aarch64, and Windows x86_64. Each release also includes `skill.zip` for Windows and `skill.tar.gz` for Unix, both unpacking to `oh-my-oc/SKILL.md` for optional agent guidance.
 
 ## Windows install
 

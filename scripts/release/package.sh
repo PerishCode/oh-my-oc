@@ -15,6 +15,7 @@ mkdir -p "$ARTIFACT_DIR"
 cargo build --release --manifest-path "$APP_DIR/Cargo.toml"
 TARBALL="$NAME-$TARGET.tar.gz"
 SKILL_ZIP="skill.zip"
+SKILL_TAR_GZ="skill.tar.gz"
 
 tmpdir=$(mktemp -d)
 trap 'rm -rf "$tmpdir"' EXIT INT TERM
@@ -23,13 +24,16 @@ tar -C "$tmpdir" -czf "$ARTIFACT_DIR/$TARBALL" "$NAME"
 mkdir -p "$tmpdir/oh-my-oc"
 cp "$ROOT/artifacts/skill/oh-my-oc/SKILL.md" "$tmpdir/oh-my-oc/SKILL.md"
 (cd "$tmpdir" && zip -qr "$ARTIFACT_DIR/$SKILL_ZIP" oh-my-oc)
+(cd "$tmpdir" && tar -czf "$ARTIFACT_DIR/$SKILL_TAR_GZ" oh-my-oc)
 (
   cd "$ARTIFACT_DIR"
   printf 'VERSION: %s\n' "$RELEASE_VERSION" > checksums.txt
   shasum -a 256 "$TARBALL" >> checksums.txt
   shasum -a 256 "$SKILL_ZIP" >> checksums.txt
+  shasum -a 256 "$SKILL_TAR_GZ" >> checksums.txt
 )
 
 printf '%s\n' "$ARTIFACT_DIR/$TARBALL"
 printf '%s\n' "$ARTIFACT_DIR/$SKILL_ZIP"
+printf '%s\n' "$ARTIFACT_DIR/$SKILL_TAR_GZ"
 printf '%s\n' "$ARTIFACT_DIR/checksums.txt"

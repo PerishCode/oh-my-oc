@@ -81,6 +81,7 @@ jobs:
           version="${GITHUB_REF_NAME}"
           dist="dist/${version}"
           (cd artifacts/skill && zip -qr "$GITHUB_WORKSPACE/$dist/skill.zip" oh-my-oc)
+          (cd artifacts/skill && tar -czf "$GITHUB_WORKSPACE/$dist/skill.tar.gz" oh-my-oc)
       - name: Create checksums
         run: |
           set -eu
