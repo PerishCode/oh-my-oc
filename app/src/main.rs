@@ -1,7 +1,7 @@
 use std::ffi::OsString;
 use std::fs;
+use std::fs::File;
 use std::path::PathBuf;
-use std::process::Command;
 
 const CURRENT_VERSION: &str = env!("CARGO_PKG_VERSION");
 const DEFAULT_PATCH_RELEASE_BASE_URL: &str =
@@ -221,14 +221,15 @@ fn backup_path(path: &std::path::Path) -> PathBuf {
 fn fetch_file(url: &str, output: &std::path::Path) -> Result<(), String> {
     #[cfg(windows)]
     {
-        return run_powershell(&[
-            "-NoProfile",
-            "-Command",
-            "& { param($url, $destination) Invoke-WebRequest -UseBasicParsing -Uri $url -OutFile $destination }",
-            url,
-            &output.display().to_string(),
-        ])
-        .map_err(|e| format!("failed to fetch {url}: {e}"));
+        let response = ureq::get(url)
+            .set("User-Agent", "oh-my-oc")
+            .call()
+            .map_err(|e| format!("failed to fetch {url}: {e}"))?;
+        let mut file = File::create(output)
+            .map_err(|e| format!("failed to create {}: {}", output.display(), e))?;
+        std::io::copy(&mut response.into_reader(), &mut file)
+            .map_err(|e| format!("failed to write {}: {}", output.display(), e))?;
+        return Ok(());
     }
 
     #[cfg(not(windows))]
@@ -246,56 +247,63 @@ fn fetch_file(url: &str, output: &std::path::Path) -> Result<(), String> {
 }
 
 fn latest_patch_version() -> Result<String, String> {
-    #[cfg(windows)]
-    {
-        return powershell_output(&[
-            "-NoProfile",
-            "-Command",
-            "& { param($url) (Invoke-RestMethod -UseBasicParsing -Uri $url).tag_name }",
-            DEFAULT_PATCH_LATEST_API_URL,
-        ])
-        .map_err(|e| format!("failed to resolve latest patch release: {e}"));
-    }
+    let response = ureq::get(DEFAULT_PATCH_LATEST_API_URL)
+        .set("Accept", "application/vnd.github+json")
+        .set("User-Agent", "oh-my-oc")
+        .call()
+        .map_err(|e| format!("failed to query latest patch release: {e}"))?;
 
-    #[cfg(not(windows))]
-    {
-        let output = Command::new("curl")
-            .args(["-fsSL", DEFAULT_PATCH_LATEST_API_URL])
-            .output()
-            .map_err(|e| format!("failed to query latest patch release: {e}"))?;
-        if !output.status.success() {
-            return Err("failed to resolve latest patch release".to_string());
-        }
+    let body = response
+        .into_string()
+        .map_err(|e| format!("failed to read latest patch release response: {e}"))?;
 
-        extract_tag_name(&String::from_utf8_lossy(&output.stdout))
-            .ok_or_else(|| "failed to parse latest patch release tag".to_string())
-    }
+    extract_tag_name(&body).ok_or_else(|| "failed to parse latest patch release tag".to_string())
 }
 
-#[cfg(not(windows))]
 fn extract_tag_name(body: &str) -> Option<String> {
-    let marker = "\"tag_name\":\"";
-    let start = body.find(marker)? + marker.len();
-    let end = body[start..].find('"')?;
-    Some(body[start..start + end].to_string())
+    let key = "\"tag_name\"";
+    let start = body.find(key)? + key.len();
+    let rest = body[start..].trim_start();
+    let rest = rest.strip_prefix(':')?.trim_start();
+    let rest = rest.strip_prefix('"')?;
+    let end = rest.find('"')?;
+    Some(rest[..end].to_string())
 }
 
 fn extract_archive(tarball: &std::path::Path, dir: &std::path::Path) -> Result<(), String> {
     #[cfg(windows)]
     {
-        return run_powershell(&[
-            "-NoProfile",
-            "-Command",
-            "& { param($archive, $destination) Expand-Archive -LiteralPath $archive -DestinationPath $destination -Force }",
-            &tarball.display().to_string(),
-            &dir.display().to_string(),
-        ])
-        .map_err(|e| format!("failed to extract {}: {e}", tarball.display()));
+        let file = File::open(tarball)
+            .map_err(|e| format!("failed to open {}: {}", tarball.display(), e))?;
+        let mut archive = zip::ZipArchive::new(file)
+            .map_err(|e| format!("failed to read {}: {}", tarball.display(), e))?;
+        fs::create_dir_all(dir)
+            .map_err(|e| format!("failed to create {}: {}", dir.display(), e))?;
+        for index in 0..archive.len() {
+            let mut entry = archive
+                .by_index(index)
+                .map_err(|e| format!("failed to read {}: {}", tarball.display(), e))?;
+            let outpath = dir.join(entry.mangled_name());
+            if entry.is_dir() {
+                fs::create_dir_all(&outpath)
+                    .map_err(|e| format!("failed to create {}: {}", outpath.display(), e))?;
+            } else {
+                if let Some(parent) = outpath.parent() {
+                    fs::create_dir_all(parent)
+                        .map_err(|e| format!("failed to create {}: {}", parent.display(), e))?;
+                }
+                let mut outfile = File::create(&outpath)
+                    .map_err(|e| format!("failed to create {}: {}", outpath.display(), e))?;
+                std::io::copy(&mut entry, &mut outfile)
+                    .map_err(|e| format!("failed to write {}: {}", outpath.display(), e))?;
+            }
+        }
+        return Ok(());
     }
 
     #[cfg(not(windows))]
     {
-        let status = Command::new("tar")
+        let status = std::process::Command::new("tar")
             .args(["-xzf"])
             .arg(tarball)
             .args(["-C"])
@@ -326,45 +334,4 @@ fn timestamp_nanos() -> u128 {
         .duration_since(UNIX_EPOCH)
         .map(|d| d.as_nanos())
         .unwrap_or(0)
-}
-
-#[cfg(windows)]
-fn run_powershell(args: &[&str]) -> Result<(), String> {
-    let output = Command::new("powershell")
-        .args(args)
-        .output()
-        .map_err(|e| format!("failed to run powershell: {e}"))?;
-    if output.status.success() {
-        return Ok(());
-    }
-
-    let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
-    if stderr.is_empty() {
-        Err("powershell command failed".to_string())
-    } else {
-        Err(stderr)
-    }
-}
-
-#[cfg(windows)]
-fn powershell_output(args: &[&str]) -> Result<String, String> {
-    let output = Command::new("powershell")
-        .args(args)
-        .output()
-        .map_err(|e| format!("failed to run powershell: {e}"))?;
-    if !output.status.success() {
-        let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
-        return if stderr.is_empty() {
-            Err("powershell command failed".to_string())
-        } else {
-            Err(stderr)
-        };
-    }
-
-    let stdout = String::from_utf8_lossy(&output.stdout).trim().to_string();
-    if stdout.is_empty() {
-        Err("powershell command returned no output".to_string())
-    } else {
-        Ok(stdout)
-    }
 }
