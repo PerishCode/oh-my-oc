@@ -13,7 +13,7 @@ Personal Opencode configuration and small Rust CLI workspace.
 
 The release path is intentionally simple:
 
-1. Run `scripts/release/package.sh <tag>` on Unix or `scripts/release/package.ps1 <tag>` on Windows to build the CLI and create a release archive plus `checksums.txt` under `dist/<tag>/`.
+1. Run `scripts/release/package.sh <tag>` on Unix or `scripts/release/package.ps1 <tag>` on Windows to build the CLI and create release artifacts plus `checksums.txt` under `dist/<tag>/`.
 2. Publish those files as GitHub release assets.
 3. Install with `curl -fsSL https://raw.githubusercontent.com/PerishCode/oh-my-oc/main/scripts/manage/install.sh | sh`, or pass `--version <tag>` / `OH_MY_OC_VERSION=<tag>` to pin a release.
 
@@ -21,7 +21,7 @@ The installer uses `OH_MY_OC_REPO`, `OH_MY_OC_BASE_URL`, `OH_MY_OC_INSTALL_ROOT`
 
 Latest mode fetches release assets from the GitHub Releases `latest/download/` path.
 
-Release assets are produced for Linux x86_64, macOS x86_64/aarch64, and Windows x86_64.
+Release assets are produced for Linux x86_64, macOS x86_64/aarch64, and Windows x86_64. Each release also includes `skill.zip`, which unpacks to `oh-my-oc/SKILL.md` for optional agent guidance.
 
 ## Windows install
 

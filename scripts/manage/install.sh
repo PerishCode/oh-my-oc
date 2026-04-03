@@ -90,3 +90,7 @@ install -m 755 "$tmpdir/$NAME" "$INSTALL_DIR/$NAME"
 ln -sf "$INSTALL_DIR/$NAME" "$LOCAL_BIN_DIR/$NAME"
 
 printf '%s\n' "$LOCAL_BIN_DIR/$NAME"
+skill_url="$BASE_URL/download/$VERSION/skill.zip"
+printf '%s\n' "Optional: install the oh-my-oc skill for agents with:"
+printf '%s\n' "mkdir -p \"\$HOME/.agents/skills\" && curl -fsSL \"$skill_url\" -o \"/tmp/oh-my-oc-skill.zip\" && unzip -oq \"/tmp/oh-my-oc-skill.zip\" -d \"\$HOME/.agents/skills\""
+printf '%s\n' "This installs agent guidance only, not the binary."

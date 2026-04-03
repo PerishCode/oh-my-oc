@@ -81,7 +81,16 @@ try {
     Copy-Item -LiteralPath (Join-Path $tmpdir "$name.exe") -Destination (Join-Path $installDir "$name.exe") -Force
     Copy-Item -LiteralPath (Join-Path $installDir "$name.exe") -Destination (Join-Path $localBinDir "$name.exe") -Force
 
+    $skillUrl = "$baseUrl/download/$version/skill.zip"
+    $skillZipPath = Join-Path $env:TEMP 'oh-my-oc-skill.zip'
     Write-Output (Join-Path $localBinDir "$name.exe")
+    Write-Output 'Optional: install the oh-my-oc skill for agents with:'
+    Write-Output '$skillsDir = Join-Path $HOME ''.agents\skills'''
+    Write-Output '$skillZipPath = Join-Path $env:TEMP ''oh-my-oc-skill.zip'''
+    Write-Output 'New-Item -ItemType Directory -Force -Path $skillsDir | Out-Null'
+    Write-Output "Invoke-WebRequest -UseBasicParsing -Uri '$skillUrl' -OutFile '$skillZipPath'"
+    Write-Output 'Expand-Archive -LiteralPath $skillZipPath -DestinationPath $skillsDir -Force'
+    Write-Output 'This installs agent guidance only, not the binary.'
     Write-Output "Add $localBinDir to your PATH using your preferred shell or environment manager to run oh-my-oc directly."
 }
 finally {
