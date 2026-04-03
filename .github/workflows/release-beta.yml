@@ -81,11 +81,11 @@ jobs:
         env:
           TARGET: ${{ matrix.target }}
         run: ./scripts/release/package.ps1 "${{ inputs.version }}"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: release-${{ matrix.target }}
           path: dist/${{ inputs.version }}/${{ matrix.archive }}
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         if: runner.os == 'Linux'
         with:
           name: release-support-assets
@@ -102,7 +102,7 @@ jobs:
       - uses: actions/checkout@v5
         with:
           ref: ${{ inputs.ref }}
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           path: dist/${{ inputs.version }}
           merge-multiple: true
